@@ -1,7 +1,9 @@
 import { ChevronLeft, Plus } from "lucide-react";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { formatDateString } from "~/lib/dates";
 import { quickAddValuesMap } from "~/lib/entry-quick-add-values";
 import type { Tracker } from "~/lib/trackers";
@@ -14,12 +16,11 @@ export function meta() {
 const tracker: Tracker = {
   id: "72hs74-sn46db",
   title: "Steps",
-  type: "steps",
+  type: "checkbox",
   isNumber: true,
   values: {
-    "2025-07-19": 3211,
+    "2025-07-19": 1,
   },
-  goal: 6000,
 };
 
 export default function LogEntryPage() {
@@ -43,33 +44,43 @@ export default function LogEntryPage() {
         </Button> */}
       </div>
       <div className="flex flex-col py-6 gap-4">
-        <div>
-          Current:{" "}
-          <span
-            className={cn("text-xl font-semibold", {
-              "text-green-600": tracker.goal && value >= tracker.goal,
-            })}
-          >
-            {value}
-            {!!tracker.goal && ` / ${tracker.goal}`}
-          </span>
-        </div>
-        {!!quickAddValues && (
-          <div className="flex gap-4">
-            {quickAddValues.map(({ label, value }) => (
-              <Button key={value}>
-                <Plus /> {label}
-              </Button>
-            ))}
+        {tracker.type === "checkbox" ? (
+          <div className="flex items-center gap-3">
+            <Checkbox id="isTrackedToday" />
+            <Label htmlFor="isTrackedToday">Tracked today</Label>
           </div>
+        ) : (
+          <>
+            <div>
+              Current:{" "}
+              <span
+                className={cn("text-xl font-semibold", {
+                  "text-green-600": tracker.goal && value >= tracker.goal,
+                })}
+              >
+                {value}
+                {!!tracker.goal && ` / ${tracker.goal}`}
+              </span>
+            </div>
+
+            {!!quickAddValues && (
+              <div className="flex gap-4">
+                {quickAddValues.map(({ label, value }) => (
+                  <Button key={value}>
+                    <Plus /> {label}
+                  </Button>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-4 items-center mt-2">
+              Custom
+              <Input className="w-40 shrink" placeholder="17492" />
+              <Button>
+                <Plus /> Add
+              </Button>
+            </div>
+          </>
         )}
-        <div className="flex gap-4 items-center mt-2">
-          Custom
-          <Input className="w-40 shrink" placeholder="17492" />
-          <Button>
-            <Plus /> Add
-          </Button>
-        </div>
       </div>
     </div>
   );
