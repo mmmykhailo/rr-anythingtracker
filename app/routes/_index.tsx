@@ -86,7 +86,7 @@ export default function Home() {
               <div className="w-2/5 font-medium">{tracker.title}</div>
               <div className="w-3/5 grid grid-cols-2 gap-2">
                 {dates.map((dateString) => {
-                  const value = tracker.values[dateString];
+                  const value = tracker.values[dateString] || 0;
 
                   return (
                     <div
