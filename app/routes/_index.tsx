@@ -170,7 +170,14 @@ export default function Home() {
 							<ContextMenu>
 								<ContextMenuTrigger asChild>
 									<div className="relative flex gap-2 items-center p-2 transition-colors hover:bg-accent cursor-context-menu">
-										<div className="w-1/3 font-medium">{tracker.title}</div>
+										<div className="w-1/3 font-medium">
+											{tracker.title}
+											{tracker.parentId && (
+												<div className="text-xs text-gray-500 opacity-75">
+													→ {trackers.find(t => t.id === tracker.parentId)?.title}
+												</div>
+											)}
+										</div>
 										<div className="w-2/3 grid grid-cols-7 gap-1 shrink-0">
 											{dates.map((dateString) => {
 												const value = tracker.values[dateString] || 0;

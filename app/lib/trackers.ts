@@ -18,4 +18,5 @@ export type Tracker = {
     [dateString: string]: number;
   };
   goal?: number;
+  parentId?: string;
 };

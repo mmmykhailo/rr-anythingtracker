@@ -48,22 +48,35 @@ npm run dev
 ### Creating a Tracker
 
 1. Click the "New tracker" button on the home page
-2. Enter a name for your tracker (e.g., "Water", "Steps", "Reading")
-3. Select a measurement unit:
-   - **Liters**: For tracking liquids
-   - **Steps**: For tracking step count
-   - **Checkbox**: For simple yes/no tracking
-   - **None**: For generic numeric tracking
+2. Enter a tracker name
+3. Select a measurement unit (type)
 4. Optionally set a daily goal
-5. Click "Save"
+5. Optionally select a parent tracker for automatic aggregation
+6. Click "Save" to create your tracker
+
+### Parent Trackers
+
+The parent tracker feature allows you to create hierarchical relationships between trackers. When you track something in a child tracker, it automatically gets added to the parent tracker.
+
+**Example Use Cases:**
+- Track "Beer" and "Wine" separately, but have both contribute to an "Alcohol" parent tracker
+- Track different coffee types (Espresso, Latte, etc.) that all contribute to a "Coffee" parent tracker
+- Track various exercise activities that all contribute to a "Workout" parent tracker
+
+**How it works:**
+- When you add +0.5L to "Beer", it automatically adds +0.5L to "Alcohol"
+- The parent tracker shows the total from all its children plus any direct entries
+- Child trackers display "→ Parent Name" to show the relationship
+- Only numeric trackers can be parents (no checkbox trackers)
+- Parent and child must have the same measurement type
 
 ### Logging Entries
 
 1. Click on any tracker from the home page
 2. Choose the date you want to log for (defaults to today)
 3. For numeric trackers:
-   - Use quick-add buttons for common values
-   - Enter a custom value and click "Add"
+   - Use quick-add buttons for common values (0.25L, 0.5L, 1L, etc.)
+   - Or enter a custom value and click "Add"
 4. For checkbox trackers:
    - Simply check/uncheck the box
 5. Your data is automatically saved

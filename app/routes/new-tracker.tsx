@@ -27,11 +27,12 @@ interface TrackerFormData {
 	title: string;
 	type: TrackerType;
 	goal?: number;
+	parentId?: string;
 }
 
 export default function NewTrackerPage() {
 	const navigate = useNavigate();
-	const { createTracker } = useTrackers();
+	const { trackers, createTracker } = useTrackers();
 	const [isCheckboxTypeSelected, setIsCheckboxTypeSelected] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
 
@@ -40,6 +41,7 @@ export default function NewTrackerPage() {
 			title: "",
 			type: "none",
 			goal: undefined,
+			parentId: undefined,
 		});
 
 	const handleSave = async () => {
@@ -58,6 +60,7 @@ export default function NewTrackerPage() {
 				type: state.type,
 				isNumber: state.type !== "checkbox",
 				...(state.goal && state.goal > 0 && { goal: state.goal }),
+				...(state.parentId && { parentId: state.parentId }),
 			};
 
 			await createTracker(trackerData);
@@ -142,6 +145,38 @@ export default function NewTrackerPage() {
 						/>
 					</div>
 				)}
+				<div className="grid items-center gap-3">
+					<Label htmlFor="parentTracker">Parent tracker (optional)</Label>
+					<Select
+						value={state.parentId || "none"}
+						onValueChange={(value: string) => {
+							updateField("parentId", value || undefined);
+						}}
+					>
+						<SelectTrigger id="parentTracker">
+							<SelectValue placeholder="Select parent tracker" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectGroup>
+								<SelectItem value="none">None</SelectItem>
+								{trackers
+									.filter((tracker) =>
+										tracker.isNumber && // Only numeric trackers can be parents
+										tracker.type !== "checkbox" && // Exclude checkbox trackers
+										(tracker.type === state.type || state.type === "none") // Match types or allow "none" type
+									)
+									.map((tracker) => (
+										<SelectItem key={tracker.id} value={tracker.id}>
+											{tracker.title}
+										</SelectItem>
+									))}
+							</SelectGroup>
+						</SelectContent>
+					</Select>
+					{errors.parentId && (
+						<div className="text-red-600 text-sm">{errors.parentId}</div>
+					)}
+				</div>
 			</div>
 		</div>
 	);
