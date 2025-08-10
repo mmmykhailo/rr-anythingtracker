@@ -1,87 +1,195 @@
-# Welcome to React Router!
+# Anything Tracker
 
-A modern, production-ready template for building full-stack React applications using React Router.
-
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+A React Router 7 application for tracking anything you want - water intake, steps, habits, or any measurable activity. All data is stored locally in your browser using IndexedDB.
 
 ## Features
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- 📊 **Track Anything**: Create custom trackers for any metric (liquids, steps, habits, etc.)
+- 📅 **Week View**: View your progress across the last 7 days with easy navigation
+- 🎯 **Goals**: Set daily goals and visualize your progress
+- ✅ **Multiple Types**: Support for numeric values and simple checkboxes
+- 💾 **Local Storage**: All data stored locally in IndexedDB - no server required
+- 📱 **Mobile-First**: Optimized for mobile devices with a clean, responsive design
+- 📤 **Export/Import**: Backup and restore your data (development mode)
+- ⚡ **Fast**: Lightweight and performant
 
 ## Getting Started
 
+### Prerequisites
+
+- [Bun](https://bun.sh/) or [Node.js](https://nodejs.org/) (v18+)
+
 ### Installation
 
-Install the dependencies:
-
+1. Clone the repository:
 ```bash
+git clone <repository-url>
+cd rr-anythingtracker
+```
+
+2. Install dependencies:
+```bash
+bun install
+# or
 npm install
 ```
 
-### Development
-
-Start the development server with HMR:
-
+3. Start the development server:
 ```bash
+bun run dev
+# or
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+4. Open your browser and navigate to `http://localhost:5173`
 
-## Building for Production
+## Usage
 
-Create a production build:
+### Creating a Tracker
 
-```bash
-npm run build
+1. Click the "New tracker" button on the home page
+2. Enter a name for your tracker (e.g., "Water", "Steps", "Reading")
+3. Select a measurement unit:
+   - **Liters**: For tracking liquids
+   - **Steps**: For tracking step count
+   - **Checkbox**: For simple yes/no tracking
+   - **None**: For generic numeric tracking
+4. Optionally set a daily goal
+5. Click "Save"
+
+### Logging Entries
+
+1. Click on any tracker from the home page
+2. Choose the date you want to log for (defaults to today)
+3. For numeric trackers:
+   - Use quick-add buttons for common values
+   - Enter a custom value and click "Add"
+4. For checkbox trackers:
+   - Simply check/uncheck the box
+5. Your data is automatically saved
+
+### Viewing Progress
+
+- The home page shows a week view of all your trackers
+- Green values indicate you've met your daily goal
+- Gray values indicate you haven't met your goal
+- Use the navigation arrows to view previous/future weeks
+- Click "This Week" to jump back to the current week
+
+## Data Management
+
+### Local Storage
+
+All your data is stored locally in your browser using IndexedDB. This means:
+- ✅ Your data is private and never leaves your device
+- ✅ Works offline
+- ❌ Data is tied to your browser - clearing browser data will delete your trackers
+- ❌ Data won't sync between devices
+
+### Backup & Restore (Development Mode)
+
+In development mode, you'll see a "Dev Utils" panel in the bottom-right corner with options to:
+
+- **Export**: Download your data as a JSON file
+- **Import**: Restore data from a JSON file
+- **Clear Data**: Delete all trackers and entries
+- **Seed Data**: Add sample data for testing
+
+## Tracker Types
+
+### Numeric Trackers
+
+- **Liters**: For tracking liquid intake (water, coffee, etc.)
+- **Steps**: For tracking daily steps or activity
+- **None**: For any other numeric value
+
+Quick-add buttons are provided for common values:
+- Liters: 0.25L, 0.5L, 1L
+- Steps: 100, 500, 1000
+- None: 1, 5
+
+### Checkbox Trackers
+
+Simple on/off tracking for habits or activities where you just need to mark completion.
+
+## Technical Details
+
+### Architecture
+
+- **Frontend**: React 19 with React Router 7
+- **Styling**: Tailwind CSS with shadcn/ui components
+- **Database**: IndexedDB via the `idb` library
+- **Build Tool**: Vite
+- **Runtime**: Supports both Node.js and Bun
+
+### Project Structure
+
+```
+app/
+├── components/          # Reusable UI components
+│   ├── ui/             # shadcn/ui components
+│   └── dev-utils.tsx   # Development utilities
+├── lib/                # Core utilities and logic
+│   ├── db.ts          # IndexedDB operations
+│   ├── hooks.ts       # React hooks for data management
+│   ├── dates.ts       # Date utilities
+│   ├── data-export.ts # Export/import functionality
+│   └── trackers.ts    # Tracker type definitions
+└── routes/            # React Router pages
+    ├── _index.tsx     # Home page (tracker list)
+    ├── new-tracker.tsx # Create new tracker
+    └── $trackerId.log-entry.tsx # Log entries
 ```
 
-## Deployment
+### Database Schema
 
-### Docker Deployment
+The app uses IndexedDB with two main stores:
 
-To build and run using Docker:
+1. **trackers**: Stores tracker metadata (name, type, goals)
+2. **entries**: Stores individual data points (value, date, tracker ID)
 
-```bash
-docker build -t my-app .
+## Development
 
-# Run the container
-docker run -p 3000:3000 my-app
-```
+### Available Scripts
 
-The containerized application can be deployed to any platform that supports Docker, including:
+- `bun run dev` - Start development server
+- `bun run build` - Build for production
+- `bun run start` - Start production server
+- `bun run typecheck` - Run TypeScript type checking
 
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
+### Adding New Tracker Types
 
-### DIY Deployment
+1. Add the new type to `trackerTypes` in `app/lib/trackers.ts`
+2. Add a label in `trackerTypesLabels`
+3. Add quick-add values in `app/lib/entry-quick-add-values.ts`
+4. Update the UI logic in the log entry page if needed
 
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
+## Browser Compatibility
 
-Make sure to deploy the output of `npm run build`
+- Modern browsers with IndexedDB support
+- Chrome 23+
+- Firefox 38+
+- Safari 8+
+- Edge 12+
 
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
+## Contributing
 
-## Styling
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+## License
 
----
+This project is open source and available under the [MIT License](LICENSE).
 
-Built with ❤️ using React Router.
+## Roadmap
+
+- [ ] Data synchronization across devices
+- [ ] More tracker types (time-based, rating scales)
+- [ ] Charts and analytics
+- [ ] Reminders and notifications
+- [ ] Themes and customization
+- [ ] Export to CSV
+- [ ] Weekly/monthly summaries
