@@ -1,5 +1,5 @@
 import { ChevronLeft, Save } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -35,6 +35,7 @@ export default function NewTrackerPage() {
 	const { trackers, createTracker } = useTrackers();
 	const [isCheckboxTypeSelected, setIsCheckboxTypeSelected] = useState(false);
 	const [isSaving, setIsSaving] = useState(false);
+	const [isTypeDisabled, setIsTypeDisabled] = useState(false);
 
 	const { state, errors, updateField, setFieldError, clearErrors } =
 		useFormState<TrackerFormData>({
@@ -43,6 +44,27 @@ export default function NewTrackerPage() {
 			goal: undefined,
 			parentId: undefined,
 		});
+
+	// Effect to handle initial state and parent selection changes
+	useEffect(() => {
+		if (state.parentId) {
+			const parentTracker = trackers.find((t) => t.id === state.parentId);
+			if (parentTracker) {
+				updateField("type", parentTracker.type);
+				setIsCheckboxTypeSelected(parentTracker.type === "checkbox");
+				setIsTypeDisabled(true);
+			}
+		} else {
+			setIsTypeDisabled(false);
+		}
+	}, [state.parentId, trackers, updateField]);
+
+	// Helper function to check if selecting a parent would create a circular reference
+	const wouldCreateCircularReference = (potentialParentId: string, allTrackers: typeof trackers): boolean => {
+		// For a new tracker, we can't have circular references since it doesn't exist yet
+		// This function is mainly for future edit functionality
+		return false;
+	};
 
 	const handleSave = async () => {
 		clearErrors();
@@ -112,8 +134,12 @@ export default function NewTrackerPage() {
 							updateField("type", value);
 							setIsCheckboxTypeSelected(value === "checkbox");
 						}}
+						disabled={isTypeDisabled}
 					>
-						<SelectTrigger id="trackerTypeTrigger">
+						<SelectTrigger
+							id="trackerTypeTrigger"
+							className={isTypeDisabled ? "opacity-60" : ""}
+						>
 							<SelectValue placeholder="Select measurement unit" />
 						</SelectTrigger>
 						<SelectContent>
@@ -126,6 +152,11 @@ export default function NewTrackerPage() {
 							</SelectGroup>
 						</SelectContent>
 					</Select>
+					{isTypeDisabled && (
+						<div className="text-blue-600 text-sm">
+							Measurement unit automatically set to match parent tracker
+						</div>
+					)}
 					{errors.type && (
 						<div className="text-red-600 text-sm">{errors.type}</div>
 					)}
@@ -150,7 +181,12 @@ export default function NewTrackerPage() {
 					<Select
 						value={state.parentId || "none"}
 						onValueChange={(value: string) => {
-							updateField("parentId", value || undefined);
+							if (value === "none") {
+								updateField("parentId", undefined);
+							} else {
+								// Additional validation could be added here
+								updateField("parentId", value);
+							}
 						}}
 					>
 						<SelectTrigger id="parentTracker">
@@ -160,10 +196,11 @@ export default function NewTrackerPage() {
 							<SelectGroup>
 								<SelectItem value="none">None</SelectItem>
 								{trackers
-									.filter((tracker) =>
-										tracker.isNumber && // Only numeric trackers can be parents
-										tracker.type !== "checkbox" && // Exclude checkbox trackers
-										(tracker.type === state.type || state.type === "none") // Match types or allow "none" type
+									.filter(
+										(tracker) =>
+											tracker.isNumber && // Only numeric trackers can be parents
+											tracker.type !== "checkbox" && // Exclude checkbox trackers
+											!wouldCreateCircularReference(tracker.id, trackers), // Prevent circular references
 									)
 									.map((tracker) => (
 										<SelectItem key={tracker.id} value={tracker.id}>
@@ -175,6 +212,12 @@ export default function NewTrackerPage() {
 					</Select>
 					{errors.parentId && (
 						<div className="text-red-600 text-sm">{errors.parentId}</div>
+					)}
+					{state.parentId && (
+						<div className="text-gray-600 text-sm">
+							Values added to this tracker will automatically be added to{" "}
+							{trackers.find(t => t.id === state.parentId)?.title}
+						</div>
 					)}
 				</div>
 			</div>
