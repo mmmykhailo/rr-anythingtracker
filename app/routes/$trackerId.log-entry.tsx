@@ -46,14 +46,6 @@ export default function LogEntryPage() {
 		}
 	}, [tracker, getCurrentEntry, selectedDate, trackerId]);
 
-	if (!trackerId) {
-		return (
-			<div className="flex items-center justify-center h-64">
-				<div className="text-red-600">Tracker ID is required</div>
-			</div>
-		);
-	}
-
 	const handleQuickAdd = async (valueToAdd: number) => {
 		try {
 			const newValue = await addToCurrentEntry(valueToAdd, selectedDate);
