@@ -9,8 +9,15 @@ import {
 } from "~/components/tracker";
 import type { HistoryEntry } from "~/components/tracker";
 
-export function meta() {
-  return [{ title: "New React Router App" }];
+export function meta({ params }: { params: { trackerId: string } }) {
+  return [
+    { title: "Log Entry - AnythingTracker" },
+    {
+      name: "description",
+      content: "Log new entries and view history for your tracker",
+    },
+    { name: "viewport", content: "width=device-width, initial-scale=1" },
+  ];
 }
 
 export default function LogEntryPage() {

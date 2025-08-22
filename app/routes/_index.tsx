@@ -26,8 +26,13 @@ const DAYS_TO_SHOW = 4;
 
 export function meta() {
   return [
-    { title: "New React Router App" },
-    { name: "description", content: "Welcome to React Router!" },
+    { title: "AnythingTracker - Track Anything, Achieve Everything" },
+    {
+      name: "description",
+      content:
+        "Your personal tracking dashboard. Monitor habits, goals, and progress across all your activities in one simple interface.",
+    },
+    { name: "viewport", content: "width=device-width, initial-scale=1" },
   ];
 }
 
