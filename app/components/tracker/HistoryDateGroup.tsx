@@ -50,6 +50,13 @@ export function HistoryDateGroup({
     }).format(new Date(date));
   };
 
+  const formatEntryValue = (entry: HistoryEntry, tracker: Tracker) => {
+    if (tracker.type === "checkbox") {
+      return entry.value > 0 ? "✓ Tracked" : "✗ Not tracked";
+    }
+    return entry.value < 0 ? `${entry.value}` : `+${entry.value}`;
+  };
+
   const totalValue = entries.reduce((sum, e) => sum + e.value, 0);
   const isToday = date === formatDateString(new Date());
 
@@ -91,19 +98,8 @@ export function HistoryDateGroup({
             {entries.map((entry) => (
               <TableRow key={entry.id}>
                 <TableCell className="w-24">
-                  <span
-                    className={cn("font-medium", {
-                      "text-green-600":
-                        tracker.goal && entry.value >= tracker.goal,
-                    })}
-                  >
-                    {tracker.type === "checkbox"
-                      ? entry.value > 0
-                        ? "✓ Tracked"
-                        : "✗ Not tracked"
-                      : tracker.isNumber
-                      ? `+${entry.value}`
-                      : `+${entry.value}`}
+                  <span className="font-medium">
+                    {formatEntryValue(entry, tracker)}
                   </span>
                 </TableCell>
                 <TableCell className="text-xs text-gray-500">
