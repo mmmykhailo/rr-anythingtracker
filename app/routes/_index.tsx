@@ -1,4 +1,4 @@
-import { addDays } from "date-fns";
+import { addDays, format } from "date-fns";
 import {
   BarChart3,
   ChevronLeft,
@@ -18,18 +18,11 @@ import {
   ContextMenuTrigger,
 } from "~/components/ui/context-menu";
 import { Separator } from "~/components/ui/separator";
-import {
-  formatDateForDisplay,
-  formatDateString,
-  getCurrentWeekStart,
-  getDaysArray,
-  getNextWeekStart,
-  getPreviousWeekStart,
-  isDateToday,
-} from "~/lib/dates";
+import { formatDateForDisplay, getDaysArray, isDateToday } from "~/lib/dates";
 import { useDatabase, useTrackers } from "~/lib/hooks";
-import type { Tracker } from "~/lib/trackers";
 import { cn } from "~/lib/utils";
+
+const DAYS_TO_SHOW = 4;
 
 export function meta() {
   return [
@@ -42,23 +35,22 @@ export default function Home() {
   const { isInitialized, error: dbError } = useDatabase();
   const { trackers, loading, error, removeTracker } = useTrackers();
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [currentWeekStart, setCurrentWeekStart] = useState(() =>
-    getCurrentWeekStart()
-  );
+  const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
 
-  // Generate array of 7 days from currentWeekStart
-  const dates = getDaysArray(currentWeekStart, 7);
+  const datesToShow = getDaysArray(currentLastDate, DAYS_TO_SHOW);
+  const currentFirstDate = new Date(datesToShow[0]);
 
-  const goToPreviousWeek = () => {
-    setCurrentWeekStart((prev) => getPreviousWeekStart(prev));
+  const firstMonth = format(currentFirstDate, "MMM");
+  const lastMonth = format(currentLastDate, "MMM");
+  const monthDisplay =
+    firstMonth === lastMonth ? firstMonth : `${firstMonth}-${lastMonth}`;
+
+  const goToPrevious = () => {
+    setCurrentLastDate((prev) => addDays(prev, -DAYS_TO_SHOW));
   };
 
-  const goToNextWeek = () => {
-    setCurrentWeekStart((prev) => getNextWeekStart(prev));
-  };
-
-  const goToCurrentWeek = () => {
-    setCurrentWeekStart(getCurrentWeekStart());
+  const goToNext = () => {
+    setCurrentLastDate((prev) => addDays(prev, DAYS_TO_SHOW));
   };
 
   const handleDeleteTracker = async (
@@ -124,21 +116,26 @@ export default function Home() {
     <div>
       <div className="w-full h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button size="sm" variant="ghost" onClick={goToPreviousWeek}>
+          <Button size="sm" variant="ghost" onClick={goToPrevious}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button size="sm" variant="ghost" onClick={goToCurrentWeek}>
-            This Week
-          </Button>
-          <Button size="sm" variant="ghost" onClick={goToNextWeek}>
+          <div className="text-sm font-medium min-w-16 text-center">
+            {monthDisplay}
+          </div>
+          <Button size="sm" variant="ghost" onClick={goToNext}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
       <div className="flex flex-col py-6">
-        <div className="px-2 w-full flex justify-end pb-2">
-          <div className="w-2/3 grid grid-cols-7 gap-1 text-xs font-medium text-center">
-            {dates.map((dateString) => {
+        <div className="px-2 w-full flex items-center pb-2">
+          <div
+            className="ml-auto w-2/3 grid gap-1 text-xs font-medium text-center"
+            style={{
+              gridTemplateColumns: `repeat(${DAYS_TO_SHOW}, minmax(0, 1fr))`,
+            }}
+          >
+            {datesToShow.map((dateString) => {
               const { weekday, day } = formatDateForDisplay(dateString);
               const isTodayDate = isDateToday(dateString);
               return (
@@ -178,10 +175,14 @@ export default function Home() {
                         </div>
                       )}
                     </div>
-                    <div className="w-2/3 grid grid-cols-7 gap-1 shrink-0">
-                      {dates.map((dateString) => {
+                    <div
+                      className="w-2/3 grid gap-1 shrink-0"
+                      style={{
+                        gridTemplateColumns: `repeat(${DAYS_TO_SHOW}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {datesToShow.map((dateString) => {
                         const value = tracker.values[dateString] || 0;
-                        const isTodayDate = isDateToday(dateString);
 
                         return (
                           <div

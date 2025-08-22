@@ -12,28 +12,10 @@ export function isDateToday(dateString: string): boolean {
   return isToday(getDateFromString(dateString));
 }
 
-export function getDaysArray(startDate: Date, numberOfDays: number): string[] {
+export function getDaysArray(lastDate: Date, numberOfDays: number): string[] {
   return Array.from({ length: numberOfDays }, (_, i) =>
-    formatDateString(addDays(startDate, i))
+    formatDateString(subDays(lastDate, numberOfDays - 1 - i))
   );
-}
-
-export function getWeekDates(referenceDate: Date = new Date()): string[] {
-  const start = subDays(referenceDate, 6); // Last 7 days ending on reference date
-  return getDaysArray(start, 7);
-}
-
-export function getPreviousWeekStart(currentWeekStart: Date): Date {
-  return subDays(currentWeekStart, 7);
-}
-
-export function getNextWeekStart(currentWeekStart: Date): Date {
-  return addDays(currentWeekStart, 7);
-}
-
-export function getCurrentWeekStart(): Date {
-  const today = new Date();
-  return subDays(today, 6);
 }
 
 export function formatDateForDisplay(dateString: string): {
