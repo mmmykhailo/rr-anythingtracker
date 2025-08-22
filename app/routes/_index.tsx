@@ -7,7 +7,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import {
@@ -38,7 +38,8 @@ export function meta() {
 
 export default function Home() {
   const { isInitialized, error: dbError } = useDatabase();
-  const { trackers, loading, error, removeTracker } = useTrackers();
+  const { trackers, loading, error, removeTracker, loadTrackers } =
+    useTrackers();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
 
@@ -49,6 +50,27 @@ export default function Home() {
   const lastMonth = format(currentLastDate, "MMM");
   const monthDisplay =
     firstMonth === lastMonth ? firstMonth : `${firstMonth}-${lastMonth}`;
+
+  // Add event listener to refresh trackers when page becomes visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadTrackers();
+      }
+    };
+
+    const handleFocus = () => {
+      loadTrackers();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [loadTrackers]);
 
   const goToPrevious = () => {
     setCurrentLastDate((prev) => addDays(prev, -DAYS_TO_SHOW));

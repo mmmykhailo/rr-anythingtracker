@@ -115,7 +115,8 @@ export async function getAllTrackers(): Promise<Tracker[]> {
     tracker.values = {};
 
     for (const entry of entries) {
-      tracker.values[entry.date] = entry.value;
+      tracker.values[entry.date] =
+        (tracker.values[entry.date] || 0) + entry.value;
     }
   }
 
@@ -135,7 +136,8 @@ export async function getTrackerById(id: string): Promise<Tracker | null> {
   tracker.values = {};
 
   for (const entry of entries) {
-    tracker.values[entry.date] = entry.value;
+    tracker.values[entry.date] =
+      (tracker.values[entry.date] || 0) + entry.value;
   }
 
   return tracker;
