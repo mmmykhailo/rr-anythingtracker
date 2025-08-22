@@ -31,7 +31,9 @@ export function EntryInput({
 
   const handleCustomAdd = async () => {
     const value = parseFloat(customInputValue);
-    if (Number.isNaN(value) || value <= 0) return;
+    if (Number.isNaN(value) || value === 0) {
+      return;
+    }
 
     try {
       await onQuickAdd(value);
@@ -84,6 +86,7 @@ export function EntryInput({
             <div className="flex gap-4">
               {quickAddValues.map(({ label, value }) => (
                 <Button
+                  variant="outline"
                   key={value}
                   onClick={() => onQuickAdd(value)}
                   disabled={entryLoading}
@@ -97,7 +100,6 @@ export function EntryInput({
             Custom
             <Input
               className="w-40 shrink"
-              placeholder="17492"
               type="number"
               value={customInputValue}
               onChange={(e) => setCustomInputValue(e.target.value)}
@@ -108,6 +110,7 @@ export function EntryInput({
               }}
             />
             <Button
+              variant="secondary"
               onClick={handleCustomAdd}
               disabled={
                 entryLoading ||

@@ -1,7 +1,15 @@
-import { Calendar } from "lucide-react";
+import { Calendar, Trash2 } from "lucide-react";
 import { formatDateString } from "~/lib/dates";
 import { cn } from "~/lib/utils";
-import { HistoryEntryItem } from "./HistoryEntryItem";
+import { Button } from "~/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "~/components/ui/table";
 import type { Tracker } from "~/lib/trackers";
 import type { HistoryEntry } from "~/lib/history";
 
@@ -31,12 +39,23 @@ export function HistoryDateGroup({
     }).format(new Date(dateString));
   };
 
+  const formatDateTime = (date: Date) => {
+    return new Intl.DateTimeFormat("en", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(date));
+  };
+
   const totalValue = entries.reduce((sum, e) => sum + e.value, 0);
   const isToday = date === formatDateString(new Date());
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 pb-1 border-b border-gray-200 dark:border-gray-600">
+      <div className="flex items-center justify-between text-sm font-medium text-gray-700 dark:text-gray-300 pb-1">
         <div className="flex items-center gap-2">
           <Calendar className="h-3 w-3" />
           <span>{isToday ? "Today" : formatDate(date)}</span>
@@ -66,17 +85,45 @@ export function HistoryDateGroup({
         </div>
       </div>
 
-      <div className="space-y-1 pl-5">
-        {entries.map((entry) => (
-          <HistoryEntryItem
-            key={entry.id}
-            entry={entry}
-            tracker={tracker}
-            onDelete={onDeleteEntry}
-            isDeleting={deletingEntryId === entry.id}
-            entryLoading={entryLoading}
-          />
-        ))}
+      <div className="border rounded-2xl">
+        <Table>
+          <TableBody>
+            {entries.map((entry) => (
+              <TableRow key={entry.id}>
+                <TableCell className="w-24">
+                  <span
+                    className={cn("font-medium", {
+                      "text-green-600":
+                        tracker.goal && entry.value >= tracker.goal,
+                    })}
+                  >
+                    {tracker.type === "checkbox"
+                      ? entry.value > 0
+                        ? "✓ Tracked"
+                        : "✗ Not tracked"
+                      : tracker.isNumber
+                      ? `+${entry.value}`
+                      : `+${entry.value}`}
+                  </span>
+                </TableCell>
+                <TableCell className="text-xs text-gray-500">
+                  {formatDateTime(entry.createdAt)}
+                </TableCell>
+                <TableCell className="w-12">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onDeleteEntry(entry.id)}
+                    disabled={deletingEntryId === entry.id || entryLoading}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

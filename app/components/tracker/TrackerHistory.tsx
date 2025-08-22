@@ -44,7 +44,7 @@ export function TrackerHistory({
   };
 
   return (
-    <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+    <div className="mt-8">
       <div className="flex items-center gap-2 mb-4">
         <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
         <h2 className="text-lg font-semibold">Recent History</h2>
@@ -61,7 +61,7 @@ export function TrackerHistory({
           </p>
         </div>
       ) : (
-        <div className="space-y-4 max-h-96 overflow-y-auto">
+        <div className="space-y-4">
           {groupEntriesByDate(history).map(({ date, entries }) => (
             <HistoryDateGroup
               key={date}
