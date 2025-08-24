@@ -13,7 +13,6 @@ import {
   getTotalValueForDate,
   getDB,
   initDB,
-  seedInitialData,
 } from "./db";
 import { formatDateString } from "./dates";
 
@@ -26,7 +25,6 @@ export function useDatabase() {
     async function init() {
       try {
         await initDB();
-        await seedInitialData();
         setIsInitialized(true);
       } catch (err) {
         setError(
