@@ -141,7 +141,7 @@ export default function Home() {
 
   return (
     <div>
-      <div className="w-full h-16 flex items-center justify-between">
+      <div className="w-full h-16 flex items-center justify-end">
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={goToPrevious}>
             <ChevronLeft className="h-4 w-4" />
