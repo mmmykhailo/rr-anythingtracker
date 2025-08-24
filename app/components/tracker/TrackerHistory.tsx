@@ -1,5 +1,4 @@
 import { Clock } from "lucide-react";
-import { formatDateString } from "~/lib/dates";
 import { HistoryDateGroup } from "./HistoryDateGroup";
 import type { Tracker } from "~/lib/trackers";
 import type { HistoryEntry } from "~/lib/history";
