@@ -1,17 +1,10 @@
 import { Calendar, Trash2 } from "lucide-react";
-import { formatDateString } from "~/lib/dates";
-import { cn } from "~/lib/utils";
 import { Button } from "~/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
-import type { Tracker } from "~/lib/trackers";
+import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table";
+import { formatDateString } from "~/lib/dates";
 import type { HistoryEntry } from "~/lib/history";
+import type { Tracker } from "~/lib/trackers";
+import { cn } from "~/lib/utils";
 
 type HistoryDateGroupProps = {
   date: string;
@@ -92,7 +85,7 @@ export function HistoryDateGroup({
         </div>
       </div>
 
-      <div className="border rounded-2xl">
+      <div className="border rounded-2xl overflow-hidden">
         <Table>
           <TableBody>
             {entries.map((entry) => (
