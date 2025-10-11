@@ -5,7 +5,7 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -34,7 +34,6 @@ export function meta() {
 }
 
 export default function SettingsPage() {
-  const navigate = useNavigate();
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 

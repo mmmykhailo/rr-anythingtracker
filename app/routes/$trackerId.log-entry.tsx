@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useLoaderData } from "react-router";
+import { useParams, useLoaderData, useLocation } from "react-router";
 import type { ClientLoaderFunctionArgs } from "react-router";
 import { formatDateString } from "~/lib/dates";
 import { useTrackerEntries } from "~/lib/hooks";
@@ -41,11 +41,13 @@ export function meta({ params }: { params: { trackerId: string } }) {
 
 export default function LogEntryPage() {
   const { trackerId } = useParams();
+  const location = useLocation();
   const { tracker } = useLoaderData<typeof clientLoader>();
   const [currentValue, setCurrentValue] = useState(0);
-  const [isCheckboxChecked, setIsCheckboxChecked] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() =>
-    formatDateString(new Date())
+    location?.state?.dateString
+      ? formatDateString(new Date(location.state.dateString))
+      : formatDateString(new Date())
   );
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
@@ -71,7 +73,6 @@ export default function LogEntryPage() {
       const loadCurrentValue = async () => {
         const value = await getCurrentEntry(selectedDate);
         setCurrentValue(value);
-        setIsCheckboxChecked(value > 0);
       };
       loadCurrentValue();
       loadHistory();
@@ -90,7 +91,6 @@ export default function LogEntryPage() {
 
   const handleCheckboxChange = async (checked: boolean) => {
     try {
-      setIsCheckboxChecked(checked);
       await setEntry(checked ? 1 : 0, selectedDate);
       setCurrentValue(checked ? 1 : 0);
       await loadHistory(); // Refresh history after updating
@@ -111,7 +111,6 @@ export default function LogEntryPage() {
       // Also refresh current value after deletion
       const value = await getCurrentEntry(selectedDate);
       setCurrentValue(value);
-      setIsCheckboxChecked(value > 0);
     } catch (error) {
       console.error("Failed to delete entry:", error);
     } finally {

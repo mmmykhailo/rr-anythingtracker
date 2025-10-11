@@ -185,8 +185,8 @@ export default function Home() {
               <Separator />
               <ContextMenu>
                 <ContextMenuTrigger asChild>
-                  <div className="relative flex gap-2 items-center p-2 transition-colors hover:bg-accent cursor-context-menu">
-                    <div className="w-1/3 font-medium">
+                  <div className="relative flex items-stretch cursor-context-menu">
+                    <div className="w-1/3 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center">
                       {tracker.title}
                       {tracker.parentId && (
                         <div className="text-xs text-gray-500 opacity-75">
@@ -197,6 +197,12 @@ export default function Home() {
                           }
                         </div>
                       )}
+                      <Link
+                        to={`/${tracker.id}/log-entry`}
+                        prefetch="viewport"
+                        className="absolute inset-0"
+                        aria-label={`Open ${tracker.title} tracker`}
+                      />
                     </div>
                     <div
                       className="w-2/3 grid gap-1 shrink-0"
@@ -210,7 +216,7 @@ export default function Home() {
                         return (
                           <div
                             className={cn(
-                              "text-center flex flex-col leading-none gap-1 py-1 rounded",
+                              "text-center flex flex-col justify-center leading-none gap-1 p-2 relative transition-colors hover:bg-accent",
                               {
                                 "opacity-50": value === 0,
                                 "text-zinc-400":
@@ -229,16 +235,17 @@ export default function Home() {
                                 {tracker.type}
                               </span>
                             )}
+                            <Link
+                              to={`/${tracker.id}/log-entry`}
+                              prefetch="viewport"
+                              className="absolute inset-0"
+                              state={{ dateString }}
+                              aria-label={`Open ${tracker.title} tracker`}
+                            />
                           </div>
                         );
                       })}
                     </div>
-                    <Link
-                      to={`/${tracker.id}/log-entry`}
-                      prefetch="viewport"
-                      className="absolute inset-0"
-                      aria-label={`Open ${tracker.title} tracker`}
-                    />
                   </div>
                 </ContextMenuTrigger>
                 <ContextMenuContent className="w-48">
