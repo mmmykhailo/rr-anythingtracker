@@ -121,7 +121,7 @@ export default function SettingsPage() {
                 className="w-full justify-start"
               >
                 <Download className="h-4 w-4 mr-2" />
-                {isExporting ? "Exporting..." : "Export Data"}
+                {isExporting ? "Downloading..." : "Download my data"}
               </Button>
               <Button
                 variant="outline"
@@ -130,11 +130,11 @@ export default function SettingsPage() {
                 className="w-full justify-start"
               >
                 <Upload className="h-4 w-4 mr-2" />
-                {isImporting ? "Importing..." : "Import Data"}
+                {isImporting ? "Importing..." : "Import data"}
               </Button>
               <div className="text-xs text-muted-foreground mt-2">
-                Export creates a JSON file with all your trackers and history.
-                Import replaces all existing data.
+                Download creates a JSON file with all your trackers and history.
+                Import REPLACES all existing data.
               </div>
             </div>
           </CardContent>
