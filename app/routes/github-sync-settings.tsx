@@ -1,5 +1,5 @@
 import { ChevronLeft, Save, Github, Info, X, Shield } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -52,6 +52,13 @@ export default function GitHubSyncSettingsPage() {
   const [showGistInfo, setShowGistInfo] = useState(false);
   const [showEncryptionInfo, setShowEncryptionInfo] = useState(false);
   const [hasExistingGistData, setHasExistingGistData] = useState(false);
+
+  const isSyncEnabled = useMemo(() => {
+    return (
+      localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN) &&
+      localStorage.getItem(STORAGE_KEYS.GIST_ID)
+    );
+  }, []);
 
   // Check if coming from onboarding
   const isFromOnboarding = location.state?.from === "onboarding";
@@ -296,7 +303,11 @@ export default function GitHubSyncSettingsPage() {
         <div className="flex flex-col gap-3 mt-4">
           <Button onClick={handleSave} disabled={isSaving}>
             <Save className="h-4 w-4" />
-            {isSaving ? "Saving..." : "Save and Enable Sync"}
+            {isSaving
+              ? "Saving..."
+              : isSyncEnabled
+              ? "Save"
+              : "Save and Enable sync"}
           </Button>
           <Button
             variant="outline"
