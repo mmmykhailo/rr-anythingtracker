@@ -9,6 +9,7 @@ export const quickAddValuesMap: Record<
 > = {
   liters: [
     { label: "0.25L", value: 250 }, // 250 milliliters
+    { label: "0.33L", value: 330 }, // 330 milliliters
     { label: "0.5L", value: 500 }, // 500 milliliters
     { label: "1L", value: 1000 }, // 1000 milliliters
   ],
