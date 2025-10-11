@@ -1,10 +1,38 @@
-const GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN;
-const GIST_ID = import.meta.env.VITE_GIST_ID;
+// Storage keys for GitHub sync configuration
+const STORAGE_KEYS = {
+  GITHUB_TOKEN: "github_token",
+  GIST_ID: "gist_id",
+  GITHUB_SYNC_OPTED_OUT: "github_sync_opted_out",
+} as const;
 
-if (!GITHUB_TOKEN || !GIST_ID) {
-  console.warn(
-    "GitHub Gist sync: Missing VITE_GITHUB_TOKEN or VITE_GIST_ID environment variables"
-  );
+// Helper function to get credentials from localStorage
+export function getGitHubCredentials(): {
+  token: string | null;
+  gistId: string | null;
+  isOptedOut: boolean;
+} {
+  if (typeof window === "undefined") {
+    return { token: null, gistId: null, isOptedOut: false };
+  }
+
+  const isOptedOut =
+    localStorage.getItem(STORAGE_KEYS.GITHUB_SYNC_OPTED_OUT) === "true";
+
+  if (isOptedOut) {
+    return { token: null, gistId: null, isOptedOut: true };
+  }
+
+  return {
+    token: localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN),
+    gistId: localStorage.getItem(STORAGE_KEYS.GIST_ID),
+    isOptedOut: false,
+  };
+}
+
+// Helper function to check if sync is configured
+export function isSyncConfigured(): boolean {
+  const { token, gistId, isOptedOut } = getGitHubCredentials();
+  return !isOptedOut && !!token && !!gistId;
 }
 
 interface GistFile {
@@ -36,10 +64,14 @@ interface GistResponse {
 interface UploadOptions {
   filename?: string;
   description?: string;
+  token?: string;
+  gistId?: string;
 }
 
 interface DownloadOptions {
   filename?: string;
+  token?: string;
+  gistId?: string;
 }
 
 /**
@@ -52,9 +84,24 @@ export async function uploadJsonToGist(
   data: any,
   options: UploadOptions = {}
 ): Promise<boolean> {
-  if (!GITHUB_TOKEN || !GIST_ID) {
+  const {
+    token: storedToken,
+    gistId: storedGistId,
+    isOptedOut,
+  } = getGitHubCredentials();
+
+  // Use provided credentials or fall back to stored ones
+  const token = options.token || storedToken;
+  const gistId = options.gistId || storedGistId;
+
+  if (isOptedOut) {
+    console.error("GitHub Gist sync: User has opted out of GitHub sync");
+    return false;
+  }
+
+  if (!token || !gistId) {
     console.error(
-      "GitHub Gist sync: Missing VITE_GITHUB_TOKEN or VITE_GIST_ID environment variables"
+      "GitHub Gist sync: Missing GitHub token or Gist ID. Please configure sync in settings."
     );
     return false;
   }
@@ -69,10 +116,10 @@ export async function uploadJsonToGist(
       },
     };
 
-    const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
         "Content-Type": "application/json",
@@ -108,9 +155,24 @@ export async function uploadJsonToGist(
 export async function downloadJsonFromGist(
   options: DownloadOptions = {}
 ): Promise<any | null> {
-  if (!GITHUB_TOKEN || !GIST_ID) {
+  const {
+    token: storedToken,
+    gistId: storedGistId,
+    isOptedOut,
+  } = getGitHubCredentials();
+
+  // Use provided credentials or fall back to stored ones
+  const token = options.token || storedToken;
+  const gistId = options.gistId || storedGistId;
+
+  if (isOptedOut) {
+    console.error("GitHub Gist sync: User has opted out of GitHub sync");
+    return null;
+  }
+
+  if (!token || !gistId) {
     console.error(
-      "GitHub Gist sync: Missing VITE_GITHUB_TOKEN or VITE_GIST_ID environment variables"
+      "GitHub Gist sync: Missing GitHub token or Gist ID. Please configure sync in settings."
     );
     return null;
   }
@@ -118,10 +180,10 @@ export async function downloadJsonFromGist(
   const filename = options.filename || "data.json";
 
   try {
-    const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
       },
@@ -167,11 +229,13 @@ export async function downloadJsonFromGist(
  */
 export async function createJsonGist(
   data: any,
-  options: UploadOptions = {}
+  options: UploadOptions & { token: string } // token is required for creation
 ): Promise<string | null> {
-  if (!GITHUB_TOKEN) {
+  const { token } = options;
+
+  if (!token) {
     console.error(
-      "GitHub Gist sync: Missing VITE_GITHUB_TOKEN environment variable"
+      "GitHub Gist sync: GitHub token is required to create a new Gist"
     );
     return null;
   }
@@ -189,7 +253,7 @@ export async function createJsonGist(
     const response = await fetch("https://api.github.com/gists", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
         "Content-Type": "application/json",
@@ -222,12 +286,31 @@ export async function createJsonGist(
 /**
  * Deletes a file from the Gist
  * @param filename - The name of the file to delete
+ * @param options - Optional credentials
  * @returns Promise that resolves to true if successful, false otherwise
  */
-export async function deleteFileFromGist(filename: string): Promise<boolean> {
-  if (!GITHUB_TOKEN || !GIST_ID) {
+export async function deleteFileFromGist(
+  filename: string,
+  options: { token?: string; gistId?: string } = {}
+): Promise<boolean> {
+  const {
+    token: storedToken,
+    gistId: storedGistId,
+    isOptedOut,
+  } = getGitHubCredentials();
+
+  // Use provided credentials or fall back to stored ones
+  const token = options.token || storedToken;
+  const gistId = options.gistId || storedGistId;
+
+  if (isOptedOut) {
+    console.error("GitHub Gist sync: User has opted out of GitHub sync");
+    return false;
+  }
+
+  if (!token || !gistId) {
     console.error(
-      "GitHub Gist sync: Missing VITE_GITHUB_TOKEN or VITE_GIST_ID environment variables"
+      "GitHub Gist sync: Missing GitHub token or Gist ID. Please configure sync in settings."
     );
     return false;
   }
@@ -237,10 +320,10 @@ export async function deleteFileFromGist(filename: string): Promise<boolean> {
       [filename]: null,
     };
 
-    const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
       method: "PATCH",
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
         "Content-Type": "application/json",
@@ -269,21 +352,39 @@ export async function deleteFileFromGist(filename: string): Promise<boolean> {
 
 /**
  * Lists all files in the Gist
+ * @param options - Optional credentials
  * @returns Promise that resolves to an array of filenames, or null if failed
  */
-export async function listGistFiles(): Promise<string[] | null> {
-  if (!GITHUB_TOKEN || !GIST_ID) {
+export async function listGistFiles(
+  options: { token?: string; gistId?: string } = {}
+): Promise<string[] | null> {
+  const {
+    token: storedToken,
+    gistId: storedGistId,
+    isOptedOut,
+  } = getGitHubCredentials();
+
+  // Use provided credentials or fall back to stored ones
+  const token = options.token || storedToken;
+  const gistId = options.gistId || storedGistId;
+
+  if (isOptedOut) {
+    console.error("GitHub Gist sync: User has opted out of GitHub sync");
+    return null;
+  }
+
+  if (!token || !gistId) {
     console.error(
-      "GitHub Gist sync: Missing VITE_GITHUB_TOKEN or VITE_GIST_ID environment variables"
+      "GitHub Gist sync: Missing GitHub token or Gist ID. Please configure sync in settings."
     );
     return null;
   }
 
   try {
-    const response = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+    const response = await fetch(`https://api.github.com/gists/${gistId}`, {
       method: "GET",
       headers: {
-        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Authorization: `Bearer ${token}`,
         Accept: "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
       },

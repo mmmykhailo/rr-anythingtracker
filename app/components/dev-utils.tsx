@@ -8,7 +8,14 @@ import {
   validateExportData,
   exportData,
 } from "~/lib/data-export";
-import { uploadJsonToGist, downloadJsonFromGist } from "~/lib/github-gist-sync";
+import {
+  uploadJsonToGist,
+  downloadJsonFromGist,
+  isSyncConfigured,
+  getGitHubCredentials,
+} from "~/lib/github-gist-sync";
+import { Link } from "react-router";
+import { Settings } from "lucide-react";
 
 export function DevUtils() {
   const [isClearing, setIsClearing] = useState(false);
@@ -17,6 +24,9 @@ export function DevUtils() {
   const [isImporting, setIsImporting] = useState(false);
   const [isUploadingToGist, setIsUploadingToGist] = useState(false);
   const [isDownloadingFromGist, setIsDownloadingFromGist] = useState(false);
+
+  const syncConfigured = isSyncConfigured();
+  const { isOptedOut } = getGitHubCredentials();
 
   const handleClearData = async () => {
     if (
@@ -91,6 +101,17 @@ export function DevUtils() {
   };
 
   const handleUploadToGist = async () => {
+    if (!syncConfigured) {
+      if (
+        confirm(
+          "GitHub sync is not configured. Would you like to set it up now?"
+        )
+      ) {
+        window.location.href = "/github-sync-settings";
+      }
+      return;
+    }
+
     try {
       setIsUploadingToGist(true);
       const data = await exportData();
@@ -114,6 +135,17 @@ export function DevUtils() {
   };
 
   const handleDownloadFromGist = async () => {
+    if (!syncConfigured) {
+      if (
+        confirm(
+          "GitHub sync is not configured. Would you like to set it up now?"
+        )
+      ) {
+        window.location.href = "/github-sync-settings";
+      }
+      return;
+    }
+
     if (
       !confirm("Download data from Gist? This will replace all existing data.")
     ) {
@@ -152,7 +184,26 @@ export function DevUtils() {
 
   return (
     <div className="fixed bottom-4 right-4 bg-gray-800 p-4 rounded-lg border border-gray-600 text-sm max-w-xs">
-      <div className="font-medium mb-2 text-gray-300">Dev Utils</div>
+      <div className="font-medium mb-2 text-gray-300 flex items-center justify-between">
+        <span>Dev Utils</span>
+        <Button size="sm" variant="ghost" asChild className="h-6 px-2">
+          <Link to="/github-sync-settings">
+            <Settings className="h-3 w-3" />
+          </Link>
+        </Button>
+      </div>
+
+      {/* Sync Status Indicator */}
+      <div className="mb-2 text-xs">
+        {isOptedOut ? (
+          <span className="text-yellow-400">⚠️ Sync opted out</span>
+        ) : syncConfigured ? (
+          <span className="text-green-400">✓ Sync configured</span>
+        ) : (
+          <span className="text-red-400">✗ Sync not configured</span>
+        )}
+      </div>
+
       <div className="flex flex-col gap-2">
         <div className="flex gap-2">
           <Button
@@ -195,8 +246,15 @@ export function DevUtils() {
             size="sm"
             variant="outline"
             onClick={handleUploadToGist}
-            disabled={isUploadingToGist}
+            disabled={isUploadingToGist || isOptedOut}
             className="flex-1"
+            title={
+              isOptedOut
+                ? "Sync opted out"
+                : !syncConfigured
+                ? "Sync not configured"
+                : "Upload to GitHub Gist"
+            }
           >
             {isUploadingToGist ? "Uploading..." : "↑ Gist"}
           </Button>
@@ -204,8 +262,15 @@ export function DevUtils() {
             size="sm"
             variant="outline"
             onClick={handleDownloadFromGist}
-            disabled={isDownloadingFromGist}
+            disabled={isDownloadingFromGist || isOptedOut}
             className="flex-1"
+            title={
+              isOptedOut
+                ? "Sync opted out"
+                : !syncConfigured
+                ? "Sync not configured"
+                : "Download from GitHub Gist"
+            }
           >
             {isDownloadingFromGist ? "Downloading..." : "↓ Gist"}
           </Button>

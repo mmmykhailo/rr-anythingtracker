@@ -5,6 +5,7 @@ import {
   ChevronRight,
   Edit,
   Plus,
+  Settings,
   Trash2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
@@ -119,7 +120,12 @@ export default function Home() {
 
   return (
     <div>
-      <div className="w-full h-16 flex items-center justify-end">
+      <div className="w-full h-16 flex items-center justify-between">
+        <Button asChild variant="ghost" size="icon">
+          <Link to="/github-sync-settings">
+            <Settings className="h-4 w-4" />
+          </Link>
+        </Button>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={goToPrevious}>
             <ChevronLeft className="h-4 w-4" />
