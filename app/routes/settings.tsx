@@ -19,7 +19,7 @@ import {
   exportAllData,
   importAllDataWithConfirmation,
 } from "~/lib/data-operations";
-import { isSyncConfigured, getGitHubCredentials } from "~/lib/github-gist-sync";
+import { isSyncConfigured } from "~/lib/github-gist-sync";
 
 export function meta() {
   return [
@@ -39,7 +39,6 @@ export default function SettingsPage() {
   const [isImporting, setIsImporting] = useState(false);
 
   const syncConfigured = isSyncConfigured();
-  const { isOptedOut } = getGitHubCredentials();
 
   const handleExport = async () => {
     try {
@@ -71,12 +70,6 @@ export default function SettingsPage() {
   };
 
   const getGitHubSyncStatus = () => {
-    if (isOptedOut) {
-      return {
-        text: "Opted out",
-        color: "text-yellow-600 dark:text-yellow-400",
-      };
-    }
     if (syncConfigured) {
       return {
         text: "Configured",
