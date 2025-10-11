@@ -1,6 +1,7 @@
 import { addDays, format } from "date-fns";
 import {
   BarChart3,
+  Check,
   ChevronLeft,
   ChevronRight,
   Edit,
@@ -227,14 +228,24 @@ export default function Home() {
                             )}
                             key={dateString}
                           >
-                            <span className="font-semibold text-xs">
-                              {formatStoredValue(value, tracker.type)}
-                            </span>
-                            {tracker.type !== "checkbox" && (
-                              <span className="text-xs opacity-60">
-                                {tracker.type}
+                            {tracker.type !== "checkbox" ? (
+                              <span className="font-semibold text-xs">
+                                {formatStoredValue(value, tracker.type)}
                               </span>
+                            ) : (
+                              <>
+                                {!!value && (
+                                  <Check size={24} className="mx-auto" />
+                                )}
+                              </>
                             )}
+
+                            {tracker.type !== "checkbox" &&
+                              tracker.type !== "none" && (
+                                <span className="text-xs opacity-60">
+                                  {tracker.type}
+                                </span>
+                              )}
                             <Link
                               to={`/${tracker.id}/log-entry`}
                               prefetch="viewport"
