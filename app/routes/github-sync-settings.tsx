@@ -27,7 +27,6 @@ export function meta() {
 const STORAGE_KEYS = {
   GITHUB_TOKEN: "github_token",
   GIST_ID: "gist_id",
-  GITHUB_SYNC_OPTED_OUT: "github_sync_opted_out",
 } as const;
 
 export default function GitHubSyncSettingsPage() {
@@ -68,12 +67,9 @@ export default function GitHubSyncSettingsPage() {
     try {
       setIsSaving(true);
 
-      // Save to localStorage
       localStorage.setItem(STORAGE_KEYS.GITHUB_TOKEN, githubToken.trim());
       localStorage.setItem(STORAGE_KEYS.GIST_ID, gistId.trim());
-      localStorage.removeItem(STORAGE_KEYS.GITHUB_SYNC_OPTED_OUT);
 
-      // Navigate back to home
       navigate("/", { replace: true });
     } catch (error) {
       console.error("Failed to save GitHub sync settings:", error);
@@ -95,7 +91,6 @@ export default function GitHubSyncSettingsPage() {
       // Clear any existing values and set opted out flag
       localStorage.removeItem(STORAGE_KEYS.GITHUB_TOKEN);
       localStorage.removeItem(STORAGE_KEYS.GIST_ID);
-      localStorage.setItem(STORAGE_KEYS.GITHUB_SYNC_OPTED_OUT, "true");
 
       // Navigate back to home
       navigate("/", { replace: true });
@@ -104,24 +99,20 @@ export default function GitHubSyncSettingsPage() {
     }
   };
 
-  const handleSkip = () => {
-    navigate("/", { replace: true });
-  };
-
   return (
     <div>
       <div className="w-full h-16 flex items-center justify-between">
         <div className="flex gap-4 items-center">
           <Button asChild variant="ghost" size="icon">
-            <Link to="/">
+            <Link to="/settings">
               <ChevronLeft />
             </Link>
           </Button>
           <span className="font-medium">GitHub Sync Settings</span>
         </div>
-        <Button variant="ghost" onClick={handleSkip}>
+        {/*<Button variant="ghost" onClick={handleSkip}>
           Skip for now
-        </Button>
+        </Button>*/}
       </div>
 
       <div className="flex flex-col py-6 gap-4">

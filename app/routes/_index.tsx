@@ -122,7 +122,7 @@ export default function Home() {
     <div>
       <div className="w-full h-16 flex items-center justify-between">
         <Button asChild variant="ghost" size="icon">
-          <Link to="/github-sync-settings">
+          <Link to="/settings">
             <Settings className="h-4 w-4" />
           </Link>
         </Button>
