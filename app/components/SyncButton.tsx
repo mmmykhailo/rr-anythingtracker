@@ -1,14 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import {
-  Cloud,
-  CloudOff,
-  RefreshCw,
-  Check,
-  AlertCircle,
-  CloudUpload,
-  CloudDownload,
-} from "lucide-react";
+import { RefreshCw, CloudCheck, AlertCircle } from "lucide-react";
 import { Button } from "~/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "~/components/ui/tooltip";
 import {
   isSyncConfigured,
   uploadJsonToGist,
@@ -31,18 +28,17 @@ interface SyncState {
   message?: string;
   lastSyncTime?: Date;
   lastError?: string;
-  autoSyncEnabled?: boolean;
 }
 
-const AUTO_SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutes
+const AUTO_SYNC_INTERVAL = 3 * 60 * 1000; // 3 minutes
 const STATUS_RESET_DELAY = 3000; // 3 seconds
 
 export function SyncButton() {
   const [syncState, setSyncState] = useState<SyncState>({
     status: "idle",
-    autoSyncEnabled: true,
   });
   const [isConfigured, setIsConfigured] = useState(false);
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const autoSyncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -53,7 +49,8 @@ export function SyncButton() {
     statusTimeoutRef.current = setTimeout(() => {
       setSyncState((prev) => ({
         ...prev,
-        status: "idle",
+        // Keep success status, only reset other statuses
+        status: prev.status === "success" ? "success" : "idle",
         message: undefined,
       }));
     }, STATUS_RESET_DELAY);
@@ -65,22 +62,21 @@ export function SyncButton() {
     setIsConfigured(configured);
 
     if (configured) {
-      // Load last sync time and auto-sync preference from localStorage
+      // Load last sync time from localStorage
       const lastSync = localStorage.getItem("last_sync_time");
-      const autoSyncPref = localStorage.getItem("auto_sync_enabled");
 
       setSyncState((prev) => ({
         ...prev,
         lastSyncTime: lastSync ? new Date(lastSync) : undefined,
-        autoSyncEnabled: autoSyncPref !== "false", // Default to true
       }));
 
-      // Start auto-sync if enabled
-      if (autoSyncPref !== "false") {
-        autoSyncIntervalRef.current = setInterval(() => {
-          handleSync(true);
-        }, AUTO_SYNC_INTERVAL);
-      }
+      // Initiate first sync on page load
+      handleSync(true);
+
+      // Start auto-sync
+      autoSyncIntervalRef.current = setInterval(() => {
+        handleSync(true);
+      }, AUTO_SYNC_INTERVAL);
     }
 
     // Cleanup
@@ -110,6 +106,9 @@ export function SyncButton() {
           message: "Checking for changes...",
         }));
 
+        // Get local data first
+        const localData = await exportData();
+
         // First, try to download from Gist to check for remote changes
         const remoteData = await downloadJsonFromGist({
           filename: "anythingtracker-data.json",
@@ -119,9 +118,6 @@ export function SyncButton() {
         let syncAction = "none";
 
         if (remoteData && validateExportData(remoteData)) {
-          // Get local data to check if this is first-time sync
-          const localData = await exportData();
-
           // Check if this is first-time sync (no trackers in local data)
           const isFirstSync = localData.trackers.length === 0;
 
@@ -156,6 +152,21 @@ export function SyncButton() {
             const remoteChangeDate = remoteData.lastChangeDate
               ? new Date(remoteData.lastChangeDate)
               : new Date(remoteData.exportDate);
+
+            // Check if there are any changes (either local or remote is newer)
+            const hasChanges =
+              localChangeDate.getTime() !== remoteChangeDate.getTime();
+
+            if (!hasChanges) {
+              setSyncState((prev) => ({
+                ...prev,
+                status: "success",
+                message: "Auto-synced",
+                lastSyncTime: new Date(),
+                lastError: undefined,
+              }));
+              return;
+            }
 
             if (remoteChangeDate > localChangeDate) {
               // Remote data is newer
@@ -216,14 +227,27 @@ export function SyncButton() {
         }
 
         if (shouldUpload) {
+          // Check if local data has changed since last sync
+          const lastSyncTime = localStorage.getItem("last_sync_time");
+          const localChangeDate = localData.lastChangeDate
+            ? new Date(localData.lastChangeDate)
+            : new Date(localData.exportDate);
+
+          // If last sync exists and local data hasn't changed since then, keep success status
+          if (lastSyncTime && syncState.status === "success") {
+            const lastSync = new Date(lastSyncTime);
+            if (localChangeDate <= lastSync) {
+              return; // No changes to upload, keep success status
+            }
+          }
+
           setSyncState((prev) => ({
             ...prev,
             status: "uploading",
             message: isAutoSync ? "Auto-uploading..." : "Uploading...",
           }));
 
-          // Export local data and upload to Gist
-          const localData = await exportData();
+          // Upload to Gist
           const uploadSuccess = await uploadJsonToGist(localData, {
             filename: "anythingtracker-data.json",
             description: "AnythingTracker backup data",
@@ -266,25 +290,6 @@ export function SyncButton() {
     [isConfigured, syncState.status, resetStatus]
   );
 
-  const toggleAutoSync = () => {
-    const newValue = !syncState.autoSyncEnabled;
-    localStorage.setItem("auto_sync_enabled", newValue.toString());
-    setSyncState((prev) => ({ ...prev, autoSyncEnabled: newValue }));
-
-    if (newValue) {
-      // Start auto-sync
-      autoSyncIntervalRef.current = setInterval(() => {
-        handleSync(true);
-      }, AUTO_SYNC_INTERVAL);
-    } else {
-      // Stop auto-sync
-      if (autoSyncIntervalRef.current) {
-        clearInterval(autoSyncIntervalRef.current);
-        autoSyncIntervalRef.current = null;
-      }
-    }
-  };
-
   // Don't render if sync is not configured
   if (!isConfigured) {
     return null;
@@ -293,107 +298,88 @@ export function SyncButton() {
   const getIcon = () => {
     switch (syncState.status) {
       case "checking":
-        return <RefreshCw className="h-4 w-4 animate-spin" />;
       case "uploading":
-        return <CloudUpload className="h-4 w-4 animate-pulse" />;
       case "downloading":
-        return <CloudDownload className="h-4 w-4 animate-pulse" />;
+        return <RefreshCw className="h-4 w-4 animate-spin text-foreground" />;
       case "success":
-        return <Check className="h-4 w-4" />;
+        return (
+          <CloudCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+        );
       case "error":
-        return <AlertCircle className="h-4 w-4" />;
       case "conflict":
-        return <CloudOff className="h-4 w-4" />;
+        return (
+          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+        );
       default:
-        return <Cloud className="h-4 w-4" />;
+        return <RefreshCw className="h-4 w-4" />;
     }
   };
 
-  const getButtonText = () => {
-    if (syncState.message && syncState.status !== "idle") {
-      return syncState.message;
-    }
+  const getTooltipContent = () => {
+    let content = "Sync with cloud";
 
-    if (["checking", "uploading", "downloading"].includes(syncState.status)) {
-      return "";
+    if (
+      syncState.status === "checking" ||
+      syncState.status === "uploading" ||
+      syncState.status === "downloading"
+    ) {
+      content = "Syncing...";
+    } else if (syncState.status === "success") {
+      content = "Sync complete";
+    } else if (syncState.status === "error") {
+      content = `Sync failed: ${syncState.lastError || "Unknown error"}`;
     }
 
     if (syncState.lastSyncTime) {
       const now = new Date();
       const diff = now.getTime() - syncState.lastSyncTime.getTime();
-      const minutes = Math.floor(diff / 60000);
+      const seconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(seconds / 60);
       const hours = Math.floor(minutes / 60);
       const days = Math.floor(hours / 24);
 
+      let timeAgo = "";
       if (days > 0) {
-        return `${days}d ago`;
+        timeAgo = `> ${days}d ago`;
       } else if (hours > 0) {
-        return `${hours}h ago`;
+        timeAgo = `> ${hours}h ago`;
       } else if (minutes > 0) {
-        return `${minutes}m ago`;
+        timeAgo = `> ${minutes}m ago`;
+      } else if (seconds > 30) {
+        timeAgo = "> 30s ago";
+      } else if (seconds > 15) {
+        timeAgo = "> 15s ago";
+      } else if (seconds > 5) {
+        timeAgo = "> 5s ago";
       } else {
-        return "Just now";
+        timeAgo = "Just now";
       }
+      content += `\nLast synced: ${timeAgo}`;
     }
 
-    return "Sync";
-  };
-
-  const getButtonVariant = () => {
-    switch (syncState.status) {
-      case "error":
-        return "destructive";
-      case "success":
-        return "secondary";
-      default:
-        return "ghost";
-    }
-  };
-
-  const getTooltipContent = () => {
-    let content = "";
-
-    if (syncState.lastSyncTime) {
-      content += `Last synced: ${syncState.lastSyncTime.toLocaleString()}`;
-    }
-
-    if (syncState.lastError) {
-      content += `\nLast error: ${syncState.lastError}`;
-    }
-
-    content += `\nAuto-sync: ${
-      syncState.autoSyncEnabled ? "Enabled" : "Disabled"
-    }`;
     content += "\n\nClick to sync now";
-    content += "\nRight-click to toggle auto-sync";
 
     return content;
   };
 
   return (
-    <Button
-      size="sm"
-      variant={getButtonVariant()}
-      onClick={() => handleSync(false)}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        toggleAutoSync();
-      }}
-      disabled={["uploading", "downloading", "checking"].includes(
-        syncState.status
-      )}
-      className={cn(
-        "gap-2 transition-all relative",
-        syncState.status === "success" && "text-green-600 dark:text-green-400",
-        syncState.status === "error" && "text-red-600 dark:text-red-400"
-      )}
-      title={getTooltipContent()}
-    >
-      {getIcon()}
-      <span className="text-xs">{getButtonText()}</span>
-      {syncState.autoSyncEnabled && (
-        <span className="absolute -top-1 -right-1 h-2 w-2 bg-green-500 rounded-full" />
-      )}
-    </Button>
+    <Tooltip open={tooltipOpen} onOpenChange={setTooltipOpen}>
+      <TooltipTrigger asChild>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => handleSync(false)}
+          disabled={["uploading", "downloading", "checking"].includes(
+            syncState.status
+          )}
+          className={cn("h-8 w-8 transition-all relative")}
+        >
+          {getIcon()}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p className="whitespace-pre-line">{getTooltipContent()}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }

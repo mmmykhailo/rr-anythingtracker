@@ -38,7 +38,7 @@ export async function exportData(): Promise<ExportData> {
 
   const exportData: ExportData = {
     version: "1.0.0",
-    exportDate: formatDateString(new Date()),
+    exportDate: new Date().toISOString(),
     lastChangeDate: lastChangeDate?.toISOString(),
     trackers: await Promise.all(
       trackers.map(async (tracker) => {
@@ -67,7 +67,7 @@ export async function exportData(): Promise<ExportData> {
 // Import data from JSON
 export async function importData(
   exportData: ExportData,
-  clearExisting = false
+  clearExisting = true
 ): Promise<void> {
   if (clearExisting) {
     await clearAllData();
@@ -106,14 +106,14 @@ export async function importData(
         const tracker = await getTrackerById(newTrackerId);
         if (tracker) {
           tracker.parentId = newParentId;
-          await updateTracker(tracker);
+          await updateTracker(tracker, true);
         }
       }
     }
 
     // Import entries as individual entries to preserve history
     for (const entry of trackerData.entries) {
-      await createEntry(newTrackerId, entry.date, entry.value, true);
+      await createEntry(newTrackerId, entry.date, entry.value, true, true);
     }
   }
 }
@@ -128,7 +128,12 @@ export async function downloadDataAsJson(): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `anythingtracker-backup-${data.exportDate}.json`;
+  // Format the datetime for filename: YYYY-MM-DD_HH-MM-SS
+  const dateForFilename = data.exportDate
+    .replace(/:/g, "-")
+    .replace("T", "_")
+    .replace(/\.\d{3}Z$/, "");
+  a.download = `anythingtracker-backup-${dateForFilename}.json`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

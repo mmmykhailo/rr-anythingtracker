@@ -152,10 +152,15 @@ export async function saveTracker(
   return newTracker;
 }
 
-export async function updateTracker(tracker: Tracker): Promise<Tracker> {
+export async function updateTracker(
+  tracker: Tracker,
+  skipDateUpdate = false
+): Promise<Tracker> {
   const db = await getDB();
   await db.put("trackers", tracker);
-  await setLastChangeDate();
+  if (!skipDateUpdate) {
+    await setLastChangeDate();
+  }
   return tracker;
 }
 
@@ -239,7 +244,8 @@ export async function saveEntry(
   trackerId: string,
   date: string,
   value: number,
-  updateParent: boolean = true
+  updateParent: boolean = true,
+  skipDateUpdate: boolean = false
 ): Promise<void> {
   const db = await getDB();
 
@@ -255,7 +261,9 @@ export async function saveEntry(
 
   for (const entry of existingEntries) {
     await db.delete("entries", entry.id);
-    await setLastChangeDate();
+    if (!skipDateUpdate) {
+      await setLastChangeDate();
+    }
   }
 
   // Create new entry with the specified value (if > 0)
@@ -268,10 +276,14 @@ export async function saveEntry(
       createdAt: new Date(),
     };
     await db.put("entries", entry);
-    await setLastChangeDate();
+    if (!skipDateUpdate) {
+      await setLastChangeDate();
+    }
   }
 
-  await setLastChangeDate();
+  if (!skipDateUpdate) {
+    await setLastChangeDate();
+  }
 
   // Update parent tracker if one exists and there's a value change
   if (updateParent) {
@@ -287,7 +299,8 @@ export async function saveEntry(
           tracker.parentId,
           date,
           parentCurrentTotal + valueDifference,
-          false
+          false,
+          skipDateUpdate
         );
       }
     }
@@ -371,7 +384,8 @@ export async function createEntry(
   trackerId: string,
   date: string,
   value: number,
-  ignoreParent: boolean = false
+  ignoreParent: boolean = false,
+  skipDateUpdate: boolean = false
 ): Promise<void> {
   const db = await getDB();
 
@@ -384,13 +398,15 @@ export async function createEntry(
   };
 
   await db.put("entries", entry);
-  await setLastChangeDate();
+  if (!skipDateUpdate) {
+    await setLastChangeDate();
+  }
 
   // Update parent tracker if one exists
   if (!ignoreParent) {
     const tracker = await getTrackerById(trackerId);
     if (tracker?.parentId) {
-      await createEntry(tracker.parentId, date, value);
+      await createEntry(tracker.parentId, date, value, false, true);
     }
   }
 }
