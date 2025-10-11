@@ -8,9 +8,9 @@ export const quickAddValuesMap: Record<
   }> | null
 > = {
   liters: [
-    { label: "0.25L", value: 0.25 },
-    { label: "0.5L", value: 0.5 },
-    { label: "1L", value: 1 },
+    { label: "0.25L", value: 250 }, // 250 milliliters
+    { label: "0.5L", value: 500 }, // 500 milliliters
+    { label: "1L", value: 1000 }, // 1000 milliliters
   ],
   checkbox: null,
   steps: [

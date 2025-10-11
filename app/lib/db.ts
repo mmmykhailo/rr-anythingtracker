@@ -411,28 +411,28 @@ export async function seedInitialData(): Promise<void> {
       parentId: coffeeTracker.id,
     });
 
-    // Add some sample entries
-    await saveEntry(energyDrinksTracker.id, formatDate(yesterday), 1);
-    await saveEntry(energyDrinksTracker.id, formatDate(today), 0.2);
+    // Add some sample entries (stored as integers - milliliters for liters)
+    await saveEntry(energyDrinksTracker.id, formatDate(yesterday), 1000); // 1L = 1000ml
+    await saveEntry(energyDrinksTracker.id, formatDate(today), 200); // 0.2L = 200ml
 
     await saveEntry(stepsTracker.id, formatDate(yesterday), 14432);
     await saveEntry(stepsTracker.id, formatDate(today), 2312);
 
     // Add entries to child trackers (these will automatically update parent trackers)
-    await saveEntry(beerTracker.id, formatDate(yesterday), 0.5, false); // false to prevent double counting during seeding
-    await saveEntry(beerTracker.id, formatDate(today), 0.33, false);
+    await saveEntry(beerTracker.id, formatDate(yesterday), 500, false); // 0.5L = 500ml, false to prevent double counting during seeding
+    await saveEntry(beerTracker.id, formatDate(today), 330, false); // 0.33L = 330ml
 
-    await saveEntry(wineTracker.id, formatDate(yesterday), 0.15, false);
-    await saveEntry(wineTracker.id, formatDate(today), 0.1, false);
+    await saveEntry(wineTracker.id, formatDate(yesterday), 150, false); // 0.15L = 150ml
+    await saveEntry(wineTracker.id, formatDate(today), 100, false); // 0.1L = 100ml
 
-    await saveEntry(espressoTracker.id, formatDate(yesterday), 0.06, false);
-    await saveEntry(espressoTracker.id, formatDate(today), 0.03, false);
+    await saveEntry(espressoTracker.id, formatDate(yesterday), 60, false); // 0.06L = 60ml
+    await saveEntry(espressoTracker.id, formatDate(today), 30, false); // 0.03L = 30ml
 
     // Manually set parent tracker totals to match child totals
-    await saveEntry(alcoholTracker.id, formatDate(yesterday), 0.65, false); // 0.5 + 0.15
-    await saveEntry(alcoholTracker.id, formatDate(today), 0.43, false); // 0.33 + 0.1
+    await saveEntry(alcoholTracker.id, formatDate(yesterday), 650, false); // 500ml + 150ml = 650ml
+    await saveEntry(alcoholTracker.id, formatDate(today), 430, false); // 330ml + 100ml = 430ml
 
-    await saveEntry(coffeeTracker.id, formatDate(yesterday), 0.06, false); // 0.06 from espresso
-    await saveEntry(coffeeTracker.id, formatDate(today), 0.03, false); // 0.03 from espresso
+    await saveEntry(coffeeTracker.id, formatDate(yesterday), 60, false); // 60ml from espresso
+    await saveEntry(coffeeTracker.id, formatDate(today), 30, false); // 30ml from espresso
   }
 }

@@ -6,15 +6,21 @@ import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { formatDateString } from "~/lib/dates";
 import { quickAddValuesMap } from "~/lib/entry-quick-add-values";
+import {
+  formatStoredValue,
+  parseInputToStored,
+  toDisplayValue,
+  getInputStep,
+} from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
 
 import type { Tracker } from "~/lib/trackers";
 
 type EntryInputProps = {
   tracker: Tracker;
-  currentValue: number;
+  currentValue: number; // This is the stored integer value
   selectedDate: string;
-  onQuickAdd: (value: number) => Promise<void>;
+  onQuickAdd: (value: number) => Promise<void>; // Expects stored integer value
   onCheckboxChange: (checked: boolean) => Promise<void>;
   entryLoading: boolean;
 };
@@ -30,13 +36,14 @@ export function EntryInput({
   const [customInputValue, setCustomInputValue] = useState("");
 
   const handleCustomAdd = async () => {
-    const value = parseFloat(customInputValue);
-    if (Number.isNaN(value) || value === 0) {
+    // Parse the input to stored integer value
+    const storedValue = parseInputToStored(customInputValue, tracker.type);
+    if (storedValue === null || storedValue === 0) {
       return;
     }
 
     try {
-      await onQuickAdd(value);
+      await onQuickAdd(storedValue);
       setCustomInputValue("");
     } catch (error) {
       console.error("Failed to add custom value:", error);
@@ -45,6 +52,12 @@ export function EntryInput({
 
   const quickAddValues = quickAddValuesMap[tracker.type];
   const isToday = selectedDate === formatDateString(new Date());
+
+  // Convert stored value to display value for showing to user
+  const displayValue = toDisplayValue(currentValue, tracker.type);
+  const displayGoal = tracker.goal
+    ? toDisplayValue(tracker.goal, tracker.type)
+    : null;
 
   return (
     <div className="flex flex-col py-6 gap-4">
@@ -77,8 +90,9 @@ export function EntryInput({
                 "text-green-600": tracker.goal && currentValue >= tracker.goal,
               })}
             >
-              {currentValue}
-              {!!tracker.goal && ` / ${tracker.goal}`}
+              {formatStoredValue(currentValue, tracker.type)}
+              {displayGoal !== null &&
+                ` / ${formatStoredValue(tracker.goal!, tracker.type)}`}
             </span>
           </div>
 
@@ -101,6 +115,7 @@ export function EntryInput({
             <Input
               className="w-40 shrink"
               type="number"
+              step={getInputStep(tracker.type)}
               value={customInputValue}
               onChange={(e) => setCustomInputValue(e.target.value)}
               onKeyDown={(e) => {
@@ -108,6 +123,7 @@ export function EntryInput({
                   handleCustomAdd();
                 }
               }}
+              placeholder={tracker.type === "liters" ? "0.5" : "1"}
             />
             <Button
               variant="secondary"
@@ -115,7 +131,7 @@ export function EntryInput({
               disabled={
                 entryLoading ||
                 !customInputValue ||
-                Number.isNaN(parseFloat(customInputValue))
+                parseInputToStored(customInputValue, tracker.type) === null
               }
             >
               <Plus /> Add

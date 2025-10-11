@@ -20,6 +20,11 @@ import {
   trackerTypes,
   trackerTypesLabels,
 } from "~/lib/trackers";
+import {
+  parseInputToStored,
+  toDisplayValue,
+  getInputStep,
+} from "~/lib/number-conversions";
 
 export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
   try {
@@ -45,7 +50,7 @@ export function meta() {
 interface TrackerFormData {
   title: string;
   type: TrackerType;
-  goal?: number;
+  goal?: number; // Stored as integer (e.g., milliliters for liters)
   parentId?: string;
 }
 
@@ -190,11 +195,20 @@ export default function NewTrackerPage() {
             <Input
               type="number"
               id="trackerDailyGoal"
-              placeholder="0"
-              value={state.goal || ""}
+              placeholder={state.type === "liters" ? "1" : "100"}
+              step={getInputStep(state.type)}
+              value={state.goal ? toDisplayValue(state.goal, state.type) : ""}
               onChange={(e) => {
                 const value = e.target.value;
-                updateField("goal", value ? Number(value) : undefined);
+                if (value) {
+                  const storedValue = parseInputToStored(value, state.type);
+                  updateField(
+                    "goal",
+                    storedValue !== null ? storedValue : undefined
+                  );
+                } else {
+                  updateField("goal", undefined);
+                }
               }}
             />
           </div>

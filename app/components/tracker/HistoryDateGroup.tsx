@@ -4,6 +4,7 @@ import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table";
 import { formatDateString } from "~/lib/dates";
 import type { HistoryEntry } from "~/lib/history";
 import type { Tracker } from "~/lib/trackers";
+import { formatStoredValue, toDisplayValue } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
 
 type HistoryDateGroupProps = {
@@ -47,7 +48,10 @@ export function HistoryDateGroup({
     if (tracker.type === "checkbox") {
       return entry.value > 0 ? "✓ Tracked" : "✗ Not tracked";
     }
-    return entry.value < 0 ? `${entry.value}` : `+${entry.value}`;
+    // Format the stored integer value for display
+    const formattedValue = formatStoredValue(entry.value, tracker.type);
+    const sign = entry.value < 0 ? "" : "+";
+    return `${sign}${formattedValue}`;
   };
 
   const totalValue = entries.reduce((sum, e) => sum + e.value, 0);
@@ -74,13 +78,11 @@ export function HistoryDateGroup({
               ? entries.some((e) => e.value > 0)
                 ? "✓"
                 : "✗"
-              : tracker.isNumber
-              ? totalValue
-              : totalValue}
+              : formatStoredValue(totalValue, tracker.type)}
             {tracker.type !== "checkbox" &&
               tracker.isNumber &&
               tracker.goal &&
-              ` / ${tracker.goal}`}
+              ` / ${formatStoredValue(tracker.goal, tracker.type)}`}
           </span>
         </div>
       </div>

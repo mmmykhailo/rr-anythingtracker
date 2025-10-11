@@ -22,6 +22,7 @@ import { Separator } from "~/components/ui/separator";
 import { formatDateForDisplay, getDaysArray, isDateToday } from "~/lib/dates";
 import { useDatabase, useTrackerMutations } from "~/lib/hooks";
 import { getAllTrackers } from "~/lib/db";
+import { formatStoredValue } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
 
 const DAYS_TO_SHOW = 4;
@@ -203,7 +204,7 @@ export default function Home() {
                             key={dateString}
                           >
                             <span className="font-semibold text-xs">
-                              {value}
+                              {formatStoredValue(value, tracker.type)}
                             </span>
                             {tracker.type !== "checkbox" && (
                               <span className="text-xs opacity-60">
