@@ -3,9 +3,10 @@ import {
   clearAllData,
   getAllTrackers,
   getTrackerById,
-  saveEntry,
   saveTracker,
   updateTracker,
+  getEntryHistory,
+  createEntry,
 } from "./db";
 
 export interface ExportData {
@@ -19,8 +20,10 @@ export interface ExportData {
     goal?: number;
     parentId?: string;
     entries: Array<{
+      id: string;
       date: string;
       value: number;
+      createdAt: string;
     }>;
   }>;
 }
@@ -32,18 +35,25 @@ export async function exportData(): Promise<ExportData> {
   const exportData: ExportData = {
     version: "1.0.0",
     exportDate: formatDateString(new Date()),
-    trackers: trackers.map((tracker) => ({
-      id: tracker.id,
-      title: tracker.title,
-      type: tracker.type,
-      isNumber: tracker.isNumber,
-      goal: tracker.goal,
-      parentId: tracker.parentId,
-      entries: Object.entries(tracker.values).map(([date, value]) => ({
-        date,
-        value,
-      })),
-    })),
+    trackers: await Promise.all(
+      trackers.map(async (tracker) => {
+        const entries = await getEntryHistory(tracker.id);
+        return {
+          id: tracker.id,
+          title: tracker.title,
+          type: tracker.type,
+          isNumber: tracker.isNumber,
+          goal: tracker.goal,
+          parentId: tracker.parentId,
+          entries: entries.map((entry) => ({
+            id: entry.id,
+            date: entry.date,
+            value: entry.value,
+            createdAt: entry.createdAt.toISOString(),
+          })),
+        };
+      })
+    ),
   };
 
   return exportData;
@@ -91,9 +101,9 @@ export async function importData(
       }
     }
 
+    // Import entries as individual entries to preserve history
     for (const entry of trackerData.entries) {
-      const integerValue = entry.value;
-      await saveEntry(newTrackerId, entry.date, integerValue);
+      await createEntry(newTrackerId, entry.date, entry.value, true);
     }
   }
 }
@@ -163,7 +173,10 @@ export function validateExportData(data: any): data is ExportData {
         Array.isArray(tracker.entries) &&
         tracker.entries.every(
           (entry: any) =>
-            typeof entry.date === "string" && typeof entry.value === "number"
+            typeof entry.id === "string" &&
+            typeof entry.date === "string" &&
+            typeof entry.value === "number" &&
+            typeof entry.createdAt === "string"
         )
     )
   );

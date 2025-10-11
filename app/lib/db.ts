@@ -313,7 +313,8 @@ export async function getEntryHistory(
 export async function createEntry(
   trackerId: string,
   date: string,
-  value: number
+  value: number,
+  ignoreParent: boolean = false
 ): Promise<void> {
   const db = await getDB();
 
@@ -328,9 +329,11 @@ export async function createEntry(
   await db.put("entries", entry);
 
   // Update parent tracker if one exists
-  const tracker = await getTrackerById(trackerId);
-  if (tracker?.parentId) {
-    await createEntry(tracker.parentId, date, value);
+  if (!ignoreParent) {
+    const tracker = await getTrackerById(trackerId);
+    if (tracker?.parentId) {
+      await createEntry(tracker.parentId, date, value);
+    }
   }
 }
 
