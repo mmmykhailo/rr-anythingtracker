@@ -91,10 +91,8 @@ export async function importData(
       }
     }
 
-    // Add entries - ensure values are integers for consistency
     for (const entry of trackerData.entries) {
-      // Round to integer to handle any legacy float values
-      const integerValue = Math.round(entry.value);
+      const integerValue = entry.value;
       await saveEntry(newTrackerId, entry.date, integerValue);
     }
   }
