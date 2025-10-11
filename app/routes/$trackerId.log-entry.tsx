@@ -1,13 +1,32 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useLoaderData } from "react-router";
+import type { ClientLoaderFunctionArgs } from "react-router";
 import { formatDateString } from "~/lib/dates";
-import { useTracker, useTrackerEntries } from "~/lib/hooks";
+import { useTrackerEntries } from "~/lib/hooks";
+import { getTrackerById } from "~/lib/db";
 import {
   TrackerHeader,
   EntryInput,
   TrackerHistory,
 } from "~/components/tracker";
 import type { HistoryEntry } from "~/components/tracker";
+
+export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
+  const trackerId = params.trackerId;
+  if (!trackerId) {
+    throw new Response("Tracker ID is required", { status: 400 });
+  }
+
+  try {
+    const tracker = await getTrackerById(trackerId);
+    if (!tracker) {
+      throw new Response("Tracker not found", { status: 404 });
+    }
+    return { tracker };
+  } catch (error) {
+    throw new Response("Failed to load tracker", { status: 500 });
+  }
+}
 
 export function meta({ params }: { params: { trackerId: string } }) {
   return [
@@ -22,6 +41,7 @@ export function meta({ params }: { params: { trackerId: string } }) {
 
 export default function LogEntryPage() {
   const { trackerId } = useParams();
+  const { tracker } = useLoaderData<typeof clientLoader>();
   const [currentValue, setCurrentValue] = useState(0);
   const [isCheckboxChecked, setIsCheckboxChecked] = useState(false);
   const [selectedDate, setSelectedDate] = useState(() =>
@@ -30,11 +50,6 @@ export default function LogEntryPage() {
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
-  const {
-    tracker,
-    loading: trackerLoading,
-    error: trackerError,
-  } = useTracker(trackerId || "");
   const {
     addToCurrentEntry,
     getCurrentEntry,
@@ -104,20 +119,10 @@ export default function LogEntryPage() {
     }
   };
 
-  if (trackerLoading) {
+  if (!tracker) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div>Loading tracker...</div>
-      </div>
-    );
-  }
-
-  if (trackerError || !tracker) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-600">
-          {trackerError || "Tracker not found"}
-        </div>
+        <div className="text-red-600">Tracker not found</div>
       </div>
     );
   }

@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import type { Tracker } from "./trackers";
 import {
-  getAllTrackers,
-  getTrackerById,
   saveTracker,
   deleteTracker,
   saveEntry,
@@ -39,37 +37,25 @@ export function useDatabase() {
   return { isInitialized, error };
 }
 
-// Hook to manage trackers
-export function useTrackers() {
-  const [trackers, setTrackers] = useState<Tracker[]>([]);
-  const [loading, setLoading] = useState(true);
+// Hook for tracker mutations
+export function useTrackerMutations() {
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const loadTrackers = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getAllTrackers();
-      setTrackers(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load trackers");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
 
   const createTracker = useCallback(
     async (tracker: Omit<Tracker, "id" | "values">) => {
       try {
+        setLoading(true);
         setError(null);
         const newTracker = await saveTracker(tracker);
-        setTrackers((prev) => [...prev, newTracker]);
         return newTracker;
       } catch (err) {
         setError(
           err instanceof Error ? err.message : "Failed to create tracker"
         );
         throw err;
+      } finally {
+        setLoading(false);
       }
     },
     []
@@ -77,59 +63,22 @@ export function useTrackers() {
 
   const removeTracker = useCallback(async (id: string) => {
     try {
+      setLoading(true);
       setError(null);
       await deleteTracker(id);
-      setTrackers((prev) => prev.filter((t) => t.id !== id));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete tracker");
       throw err;
-    }
-  }, []);
-
-  useEffect(() => {
-    loadTrackers();
-  }, [loadTrackers]);
-
-  return {
-    trackers,
-    loading,
-    error,
-    loadTrackers,
-    createTracker,
-    removeTracker,
-  };
-}
-
-// Hook to manage a single tracker
-export function useTracker(id: string) {
-  const [tracker, setTracker] = useState<Tracker | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadTracker = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getTrackerById(id);
-      setTracker(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tracker");
     } finally {
       setLoading(false);
     }
-  }, [id]);
-
-  useEffect(() => {
-    if (id) {
-      loadTracker();
-    }
-  }, [id, loadTracker]);
+  }, []);
 
   return {
-    tracker,
     loading,
     error,
-    loadTracker,
+    createTracker,
+    removeTracker,
   };
 }
 

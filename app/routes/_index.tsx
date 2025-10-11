@@ -8,7 +8,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
+import { Link, useLoaderData, useNavigate } from "react-router";
+import type { ClientLoaderFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import {
   ContextMenu,
@@ -19,10 +20,20 @@ import {
 } from "~/components/ui/context-menu";
 import { Separator } from "~/components/ui/separator";
 import { formatDateForDisplay, getDaysArray, isDateToday } from "~/lib/dates";
-import { useDatabase, useTrackers } from "~/lib/hooks";
+import { useDatabase, useTrackerMutations } from "~/lib/hooks";
+import { getAllTrackers } from "~/lib/db";
 import { cn } from "~/lib/utils";
 
 const DAYS_TO_SHOW = 4;
+
+export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
+  try {
+    const trackers = await getAllTrackers();
+    return { trackers };
+  } catch (error) {
+    throw new Response("Failed to load trackers", { status: 500 });
+  }
+}
 
 export function meta() {
   return [
@@ -37,9 +48,10 @@ export function meta() {
 }
 
 export default function Home() {
+  const { trackers } = useLoaderData<typeof clientLoader>();
+  const navigate = useNavigate();
   const { isInitialized, error: dbError } = useDatabase();
-  const { trackers, loading, error, removeTracker, loadTrackers } =
-    useTrackers();
+  const { removeTracker, loading: mutationLoading } = useTrackerMutations();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
 
@@ -50,27 +62,6 @@ export default function Home() {
   const lastMonth = format(currentLastDate, "MMM");
   const monthDisplay =
     firstMonth === lastMonth ? firstMonth : `${firstMonth}-${lastMonth}`;
-
-  // Add event listener to refresh trackers when page becomes visible
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        loadTrackers();
-      }
-    };
-
-    const handleFocus = () => {
-      loadTrackers();
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleFocus);
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleFocus);
-    };
-  }, [loadTrackers]);
 
   const goToPrevious = () => {
     setCurrentLastDate((prev) => addDays(prev, -DAYS_TO_SHOW));
@@ -99,6 +90,8 @@ export default function Home() {
     try {
       setDeletingId(trackerId);
       await removeTracker(trackerId);
+      // Refresh the page to reload data after deletion
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Failed to delete tracker:", error);
       alert("Failed to delete tracker. Please try again.");
@@ -119,22 +112,6 @@ export default function Home() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-red-600">Database error: {dbError}</div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div>Loading trackers...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-600">Error: {error}</div>
       </div>
     );
   }

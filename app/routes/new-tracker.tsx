@@ -1,6 +1,7 @@
 import { ChevronLeft, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLoaderData } from "react-router";
+import type { ClientLoaderFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -12,12 +13,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { useFormState, useTrackers } from "~/lib/hooks";
+import { useFormState, useTrackerMutations } from "~/lib/hooks";
+import { getAllTrackers } from "~/lib/db";
 import {
   type TrackerType,
   trackerTypes,
   trackerTypesLabels,
 } from "~/lib/trackers";
+
+export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
+  try {
+    const trackers = await getAllTrackers();
+    return { trackers };
+  } catch (error) {
+    throw new Response("Failed to load trackers", { status: 500 });
+  }
+}
 
 export function meta() {
   return [
@@ -40,7 +51,8 @@ interface TrackerFormData {
 
 export default function NewTrackerPage() {
   const navigate = useNavigate();
-  const { trackers, createTracker } = useTrackers();
+  const { trackers } = useLoaderData<typeof clientLoader>();
+  const { createTracker } = useTrackerMutations();
   const [isCheckboxTypeSelected, setIsCheckboxTypeSelected] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isTypeDisabled, setIsTypeDisabled] = useState(false);
@@ -97,7 +109,7 @@ export default function NewTrackerPage() {
       };
 
       await createTracker(trackerData);
-      navigate("/");
+      navigate("/", { replace: true });
     } catch (error) {
       console.error("Failed to create tracker:", error);
     } finally {
