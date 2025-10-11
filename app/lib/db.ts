@@ -101,6 +101,12 @@ export async function saveTracker(
   return newTracker;
 }
 
+export async function updateTracker(tracker: Tracker): Promise<Tracker> {
+  const db = await getDB();
+  await db.put("trackers", tracker);
+  return tracker;
+}
+
 export async function getAllTrackers(): Promise<Tracker[]> {
   const db = await getDB();
   const trackers = await db.getAll("trackers");
