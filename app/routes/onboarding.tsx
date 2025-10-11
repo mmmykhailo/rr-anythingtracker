@@ -72,8 +72,9 @@ export default function OnboardingPage() {
             <div className="pt-2 space-y-3">
               <Button asChild className="w-full">
                 <Link
-                  to="/github-sync-settings"
                   replace
+                  to="/github-sync-settings"
+                  prefetch="viewport"
                   state={{ from: "onboarding" }}
                 >
                   <Cloud className="h-4 w-4" />
@@ -87,7 +88,7 @@ export default function OnboardingPage() {
                 variant="outline"
                 className="w-full text-muted-foreground"
               >
-                <Link to="/" replace>
+                <Link replace to="/" prefetch="viewport">
                   Fuck off, let me just use it
                 </Link>
               </Button>

@@ -104,7 +104,10 @@ export default function GitHubSyncSettingsPage() {
       <div className="w-full h-16 flex items-center justify-between">
         <div className="flex gap-4 items-center">
           <Button asChild variant="ghost" size="icon">
-            <Link to={isFromOnboarding ? "/onboarding" : "/settings"}>
+            <Link
+              to={isFromOnboarding ? "/onboarding" : "/settings"}
+              prefetch="viewport"
+            >
               <ChevronLeft />
             </Link>
           </Button>
@@ -112,7 +115,7 @@ export default function GitHubSyncSettingsPage() {
         </div>
         {isFromOnboarding && (
           <Button asChild variant="ghost">
-            <Link replace to="/">
+            <Link replace to="/" prefetch="viewport">
               Skip for now
             </Link>
           </Button>

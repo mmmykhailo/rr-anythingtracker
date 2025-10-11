@@ -86,7 +86,7 @@ export default function SettingsPage() {
       <div className="w-full h-16 flex items-center justify-between">
         <div className="flex gap-4 items-center">
           <Button asChild variant="ghost" size="icon">
-            <Link to="/">
+            <Link to="/" prefetch="viewport">
               <ChevronLeft />
             </Link>
           </Button>
@@ -157,7 +157,7 @@ export default function SettingsPage() {
                 variant="outline"
                 className="w-full justify-start"
               >
-                <Link to="/github-sync-settings">
+                <Link to="/github-sync-settings" prefetch="viewport">
                   <SettingsIcon className="h-4 w-4 mr-2" />
                   Configure GitHub Sync
                 </Link>

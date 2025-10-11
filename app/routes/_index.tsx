@@ -132,7 +132,7 @@ export default function Home() {
       <div className="w-full h-16 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="icon">
-            <Link to="/settings">
+            <Link to="/settings" prefetch="viewport">
               <Settings className="h-4 w-4" />
             </Link>
           </Button>
@@ -235,6 +235,7 @@ export default function Home() {
                     </div>
                     <Link
                       to={`/${tracker.id}/log-entry`}
+                      prefetch="viewport"
                       className="absolute inset-0"
                       aria-label={`Open ${tracker.title} tracker`}
                     />
@@ -242,13 +243,13 @@ export default function Home() {
                 </ContextMenuTrigger>
                 <ContextMenuContent className="w-48">
                   <ContextMenuItem asChild>
-                    <Link to={`/${tracker.id}/log-entry`}>
+                    <Link to={`/${tracker.id}/log-entry`} prefetch="viewport">
                       <BarChart3 className="mr-2 h-4 w-4" />
                       Open Tracker
                     </Link>
                   </ContextMenuItem>
                   <ContextMenuItem asChild>
-                    <Link to={`/${tracker.id}/log-entry`}>
+                    <Link to={`/${tracker.id}/log-entry`} prefetch="viewport">
                       <Edit className="mr-2 h-4 w-4" />
                       Log Entry
                     </Link>
@@ -275,7 +276,7 @@ export default function Home() {
       </div>
       <div className="mt-4 flex justify-center">
         <Button asChild variant="secondary">
-          <Link to="/new-tracker">
+          <Link to="/new-tracker" prefetch="viewport">
             <Plus />
             New tracker
           </Link>
