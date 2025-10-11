@@ -6,13 +6,17 @@ import {
   loadDataFromFile,
   importData,
   validateExportData,
+  exportData,
 } from "~/lib/data-export";
+import { uploadJsonToGist, downloadJsonFromGist } from "~/lib/github-gist-sync";
 
 export function DevUtils() {
   const [isClearing, setIsClearing] = useState(false);
   const [isSeeding, setIsSeeding] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [isUploadingToGist, setIsUploadingToGist] = useState(false);
+  const [isDownloadingFromGist, setIsDownloadingFromGist] = useState(false);
 
   const handleClearData = async () => {
     if (
@@ -86,6 +90,61 @@ export function DevUtils() {
     }
   };
 
+  const handleUploadToGist = async () => {
+    try {
+      setIsUploadingToGist(true);
+      const data = await exportData();
+      const success = await uploadJsonToGist(data, {
+        filename: "anythingtracker-backup.json",
+        description: "AnythingTracker data backup",
+      });
+      if (success) {
+        alert("Data uploaded to GitHub Gist successfully!");
+      } else {
+        alert(
+          "Failed to upload data to GitHub Gist. Check console for details."
+        );
+      }
+    } catch (error) {
+      console.error("Failed to upload to Gist:", error);
+      alert("Failed to upload to Gist. Check console for details.");
+    } finally {
+      setIsUploadingToGist(false);
+    }
+  };
+
+  const handleDownloadFromGist = async () => {
+    if (
+      !confirm("Download data from Gist? This will replace all existing data.")
+    ) {
+      return;
+    }
+
+    try {
+      setIsDownloadingFromGist(true);
+      const data = await downloadJsonFromGist({
+        filename: "anythingtracker-backup.json",
+      });
+
+      if (!data) {
+        throw new Error("No data received from Gist");
+      }
+
+      if (!validateExportData(data)) {
+        throw new Error("Invalid data format from Gist");
+      }
+
+      await importData(data, true);
+      alert("Data downloaded from Gist successfully. Please refresh the page.");
+      window.location.reload();
+    } catch (error) {
+      console.error("Failed to download from Gist:", error);
+      alert("Failed to download from Gist. Check console for details.");
+    } finally {
+      setIsDownloadingFromGist(false);
+    }
+  };
+
   // Only show in development mode
   if (import.meta.env.PROD) {
     return null;
@@ -129,6 +188,26 @@ export function DevUtils() {
             disabled={isImporting}
           >
             {isImporting ? "Importing..." : "Import"}
+          </Button>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleUploadToGist}
+            disabled={isUploadingToGist}
+            className="flex-1"
+          >
+            {isUploadingToGist ? "Uploading..." : "↑ Gist"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleDownloadFromGist}
+            disabled={isDownloadingFromGist}
+            className="flex-1"
+          >
+            {isDownloadingFromGist ? "Downloading..." : "↓ Gist"}
           </Button>
         </div>
       </div>
