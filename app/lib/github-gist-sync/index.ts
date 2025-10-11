@@ -1,38 +1,44 @@
 // Storage keys for GitHub sync configuration
-const STORAGE_KEYS = {
+export const STORAGE_KEYS = {
   GITHUB_TOKEN: "github_token",
   GIST_ID: "gist_id",
-  GITHUB_SYNC_OPTED_OUT: "github_sync_opted_out",
+  ONBOARDING_COMPLETED: "onboarding_completed",
 } as const;
 
 // Helper function to get credentials from localStorage
 export function getGitHubCredentials(): {
   token: string | null;
   gistId: string | null;
-  isOptedOut: boolean;
 } {
   if (typeof window === "undefined") {
-    return { token: null, gistId: null, isOptedOut: false };
-  }
-
-  const isOptedOut =
-    localStorage.getItem(STORAGE_KEYS.GITHUB_SYNC_OPTED_OUT) === "true";
-
-  if (isOptedOut) {
-    return { token: null, gistId: null, isOptedOut: true };
+    return { token: null, gistId: null };
   }
 
   return {
     token: localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN),
     gistId: localStorage.getItem(STORAGE_KEYS.GIST_ID),
-    isOptedOut: false,
   };
 }
 
 // Helper function to check if sync is configured
 export function isSyncConfigured(): boolean {
-  const { token, gistId, isOptedOut } = getGitHubCredentials();
-  return !isOptedOut && !!token && !!gistId;
+  const { token, gistId } = getGitHubCredentials();
+  return !!token && !!gistId;
+}
+
+// Helper function to check if onboarding is completed
+export function isOnboardingCompleted(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return localStorage.getItem(STORAGE_KEYS.ONBOARDING_COMPLETED) === "true";
+}
+
+// Helper function to set onboarding as completed
+export function setOnboardingCompleted(): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, "true");
+  }
 }
 
 interface GistFile {
@@ -84,20 +90,11 @@ export async function uploadJsonToGist(
   data: any,
   options: UploadOptions = {}
 ): Promise<boolean> {
-  const {
-    token: storedToken,
-    gistId: storedGistId,
-    isOptedOut,
-  } = getGitHubCredentials();
+  const { token: storedToken, gistId: storedGistId } = getGitHubCredentials();
 
   // Use provided credentials or fall back to stored ones
   const token = options.token || storedToken;
   const gistId = options.gistId || storedGistId;
-
-  if (isOptedOut) {
-    console.error("GitHub Gist sync: User has opted out of GitHub sync");
-    return false;
-  }
 
   if (!token || !gistId) {
     console.error(
@@ -155,20 +152,11 @@ export async function uploadJsonToGist(
 export async function downloadJsonFromGist(
   options: DownloadOptions = {}
 ): Promise<any | null> {
-  const {
-    token: storedToken,
-    gistId: storedGistId,
-    isOptedOut,
-  } = getGitHubCredentials();
+  const { token: storedToken, gistId: storedGistId } = getGitHubCredentials();
 
   // Use provided credentials or fall back to stored ones
   const token = options.token || storedToken;
   const gistId = options.gistId || storedGistId;
-
-  if (isOptedOut) {
-    console.error("GitHub Gist sync: User has opted out of GitHub sync");
-    return null;
-  }
 
   if (!token || !gistId) {
     console.error(
@@ -293,20 +281,11 @@ export async function deleteFileFromGist(
   filename: string,
   options: { token?: string; gistId?: string } = {}
 ): Promise<boolean> {
-  const {
-    token: storedToken,
-    gistId: storedGistId,
-    isOptedOut,
-  } = getGitHubCredentials();
+  const { token: storedToken, gistId: storedGistId } = getGitHubCredentials();
 
   // Use provided credentials or fall back to stored ones
   const token = options.token || storedToken;
   const gistId = options.gistId || storedGistId;
-
-  if (isOptedOut) {
-    console.error("GitHub Gist sync: User has opted out of GitHub sync");
-    return false;
-  }
 
   if (!token || !gistId) {
     console.error(
@@ -358,20 +337,11 @@ export async function deleteFileFromGist(
 export async function listGistFiles(
   options: { token?: string; gistId?: string } = {}
 ): Promise<string[] | null> {
-  const {
-    token: storedToken,
-    gistId: storedGistId,
-    isOptedOut,
-  } = getGitHubCredentials();
+  const { token: storedToken, gistId: storedGistId } = getGitHubCredentials();
 
   // Use provided credentials or fall back to stored ones
   const token = options.token || storedToken;
   const gistId = options.gistId || storedGistId;
-
-  if (isOptedOut) {
-    console.error("GitHub Gist sync: User has opted out of GitHub sync");
-    return null;
-  }
 
   if (!token || !gistId) {
     console.error(

@@ -25,6 +25,8 @@ import { useDatabase, useTrackerMutations } from "~/lib/hooks";
 import { getAllTrackers } from "~/lib/db";
 import { formatStoredValue } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
+import { SyncButton } from "~/components/SyncButton";
+import { isOnboardingCompleted } from "~/lib/github-gist-sync";
 
 const DAYS_TO_SHOW = 4;
 
@@ -56,6 +58,13 @@ export default function Home() {
   const { removeTracker, loading: mutationLoading } = useTrackerMutations();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
+
+  // Check if onboarding is completed
+  useEffect(() => {
+    if (isInitialized && !isOnboardingCompleted()) {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [isInitialized, navigate]);
 
   const datesToShow = getDaysArray(currentLastDate, DAYS_TO_SHOW);
   const currentFirstDate = new Date(datesToShow[0]);
@@ -121,11 +130,14 @@ export default function Home() {
   return (
     <div>
       <div className="w-full h-16 flex items-center justify-between">
-        <Button asChild variant="ghost" size="icon">
-          <Link to="/settings">
-            <Settings className="h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="ghost" size="icon">
+            <Link to="/settings">
+              <Settings className="h-4 w-4" />
+            </Link>
+          </Button>
+          <SyncButton />
+        </div>
         <div className="flex items-center gap-2">
           <Button size="sm" variant="ghost" onClick={goToPrevious}>
             <ChevronLeft className="h-4 w-4" />

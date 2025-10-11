@@ -7,11 +7,14 @@ import {
   updateTracker,
   getEntryHistory,
   createEntry,
+  getLastChangeDate,
+  setLastChangeDate,
 } from "./db";
 
 export interface ExportData {
   version: string;
   exportDate: string;
+  lastChangeDate?: string;
   trackers: Array<{
     id: string;
     title: string;
@@ -31,10 +34,12 @@ export interface ExportData {
 // Export all data to JSON
 export async function exportData(): Promise<ExportData> {
   const trackers = await getAllTrackers();
+  const lastChangeDate = await getLastChangeDate();
 
   const exportData: ExportData = {
     version: "1.0.0",
     exportDate: formatDateString(new Date()),
+    lastChangeDate: lastChangeDate?.toISOString(),
     trackers: await Promise.all(
       trackers.map(async (tracker) => {
         const entries = await getEntryHistory(tracker.id);
@@ -66,6 +71,11 @@ export async function importData(
 ): Promise<void> {
   if (clearExisting) {
     await clearAllData();
+  }
+
+  // Set the last change date from imported data
+  if (exportData.lastChangeDate) {
+    await setLastChangeDate(new Date(exportData.lastChangeDate));
   }
 
   // Create a mapping from old IDs to new IDs
@@ -163,6 +173,8 @@ export function validateExportData(data: any): data is ExportData {
     data !== null &&
     typeof data.version === "string" &&
     typeof data.exportDate === "string" &&
+    (typeof data.lastChangeDate === "string" ||
+      data.lastChangeDate === undefined) &&
     Array.isArray(data.trackers) &&
     data.trackers.every(
       (tracker: any) =>

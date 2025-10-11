@@ -1,6 +1,6 @@
-import { ChevronLeft, Save, X, Github, Info } from "lucide-react";
+import { ChevronLeft, Save, Github, Info, X } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router";
+import { Link, useNavigate, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { STORAGE_KEYS } from "~/lib/github-gist-sync";
 
 export function meta() {
   return [
@@ -24,13 +25,9 @@ export function meta() {
   ];
 }
 
-const STORAGE_KEYS = {
-  GITHUB_TOKEN: "github_token",
-  GIST_ID: "gist_id",
-} as const;
-
 export default function GitHubSyncSettingsPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [githubToken, setGithubToken] = useState(
     () => localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN) || ""
   );
@@ -42,14 +39,17 @@ export default function GitHubSyncSettingsPage() {
   const [showTokenInfo, setShowTokenInfo] = useState(false);
   const [showGistInfo, setShowGistInfo] = useState(false);
 
+  // Check if coming from onboarding
+  const isFromOnboarding = location.state?.from === "onboarding";
+
   const handleSave = async () => {
     setErrors({});
 
     // Validation
     if (!githubToken.trim() && !gistId.trim()) {
       setErrors({
-        token: "Please provide both token and Gist ID, or choose to opt-out",
-        gist: "Please provide both token and Gist ID, or choose to opt-out",
+        token: "Please provide both token and Gist ID to enable sync",
+        gist: "Please provide both token and Gist ID to enable sync",
       });
       return;
     }
@@ -104,15 +104,19 @@ export default function GitHubSyncSettingsPage() {
       <div className="w-full h-16 flex items-center justify-between">
         <div className="flex gap-4 items-center">
           <Button asChild variant="ghost" size="icon">
-            <Link to="/settings">
+            <Link to={isFromOnboarding ? "/onboarding" : "/settings"}>
               <ChevronLeft />
             </Link>
           </Button>
           <span className="font-medium">GitHub Sync Settings</span>
         </div>
-        {/*<Button variant="ghost" onClick={handleSkip}>
-          Skip for now
-        </Button>*/}
+        {isFromOnboarding && (
+          <Button asChild variant="ghost">
+            <Link replace to="/">
+              Skip for now
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col py-6 gap-4">
@@ -206,18 +210,6 @@ export default function GitHubSyncSettingsPage() {
             <Save className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save and Enable Sync"}
           </Button>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                Or
-              </span>
-            </div>
-          </div>
-
           <Button
             variant="outline"
             onClick={handleOptOut}

@@ -23,10 +23,17 @@ interface AnythingTrackerDB extends DBSchema {
       "by-tracker-date": [string, string];
     };
   };
+  metadata: {
+    key: string;
+    value: {
+      key: string;
+      value: any;
+    };
+  };
 }
 
 const DB_NAME = "AnythingTrackerDB";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let dbInstance: IDBPDatabase<AnythingTrackerDB> | null = null;
 
@@ -37,20 +44,31 @@ export async function initDB(): Promise<IDBPDatabase<AnythingTrackerDB>> {
   }
 
   dbInstance = await openDB<AnythingTrackerDB>(DB_NAME, DB_VERSION, {
-    upgrade(db) {
+    upgrade(db, oldVersion) {
       // Create trackers store
-      const trackersStore = db.createObjectStore("trackers", {
-        keyPath: "id",
-      });
-      trackersStore.createIndex("by-title", "title");
+      if (!db.objectStoreNames.contains("trackers")) {
+        const trackersStore = db.createObjectStore("trackers", {
+          keyPath: "id",
+        });
+        trackersStore.createIndex("by-title", "title");
+      }
 
       // Create entries store
-      const entriesStore = db.createObjectStore("entries", {
-        keyPath: "id",
-      });
-      entriesStore.createIndex("by-tracker", "trackerId");
-      entriesStore.createIndex("by-date", "date");
-      entriesStore.createIndex("by-tracker-date", ["trackerId", "date"]);
+      if (!db.objectStoreNames.contains("entries")) {
+        const entriesStore = db.createObjectStore("entries", {
+          keyPath: "id",
+        });
+        entriesStore.createIndex("by-tracker", "trackerId");
+        entriesStore.createIndex("by-date", "date");
+        entriesStore.createIndex("by-tracker-date", ["trackerId", "date"]);
+      }
+
+      // Create metadata store
+      if (!db.objectStoreNames.contains("metadata")) {
+        db.createObjectStore("metadata", {
+          keyPath: "key",
+        });
+      }
     },
     blocked(currentVersion, blockedVersion, event) {
       // Handle version conflicts if needed
@@ -84,6 +102,38 @@ export function generateId(): string {
   return crypto.randomUUID();
 }
 
+// Metadata operations
+export async function getLastChangeDate(): Promise<Date | null> {
+  const db = await getDB();
+  const metadata = await db.get("metadata", "lastChangeDate");
+  return metadata ? new Date(metadata.value) : null;
+}
+
+export async function setLastChangeDate(date?: Date): Promise<void> {
+  const db = await getDB();
+  const dateToSet = date || new Date();
+  await db.put("metadata", {
+    key: "lastChangeDate",
+    value: dateToSet.toISOString(),
+  });
+}
+
+export async function getOnboardingCompleted(): Promise<boolean> {
+  const db = await getDB();
+  const metadata = await db.get("metadata", "onboardingCompleted");
+  return metadata ? metadata.value : false;
+}
+
+export async function setOnboardingCompleted(
+  completed: boolean
+): Promise<void> {
+  const db = await getDB();
+  await db.put("metadata", {
+    key: "onboardingCompleted",
+    value: completed,
+  });
+}
+
 // Tracker operations
 export async function saveTracker(
   tracker: Omit<Tracker, "id" | "values">
@@ -98,12 +148,14 @@ export async function saveTracker(
   };
 
   await db.put("trackers", newTracker);
+  await setLastChangeDate();
   return newTracker;
 }
 
 export async function updateTracker(tracker: Tracker): Promise<Tracker> {
   const db = await getDB();
   await db.put("trackers", tracker);
+  await setLastChangeDate();
   return tracker;
 }
 
@@ -166,6 +218,7 @@ export async function deleteTracker(id: string): Promise<void> {
   }
 
   await tx.done;
+  await setLastChangeDate();
 }
 
 // Get total value for a date by summing all entries
@@ -202,6 +255,7 @@ export async function saveEntry(
 
   for (const entry of existingEntries) {
     await db.delete("entries", entry.id);
+    await setLastChangeDate();
   }
 
   // Create new entry with the specified value (if > 0)
@@ -214,7 +268,10 @@ export async function saveEntry(
       createdAt: new Date(),
     };
     await db.put("entries", entry);
+    await setLastChangeDate();
   }
+
+  await setLastChangeDate();
 
   // Update parent tracker if one exists and there's a value change
   if (updateParent) {
@@ -327,6 +384,7 @@ export async function createEntry(
   };
 
   await db.put("entries", entry);
+  await setLastChangeDate();
 
   // Update parent tracker if one exists
   if (!ignoreParent) {
@@ -341,6 +399,7 @@ export async function createEntry(
 export async function deleteEntryById(entryId: string): Promise<void> {
   const db = await getDB();
   await db.delete("entries", entryId);
+  await setLastChangeDate();
 }
 
 // Utility to clear all data (useful for development/testing)
@@ -352,6 +411,7 @@ export async function clearAllData(): Promise<void> {
   await tx.objectStore("entries").clear();
 
   await tx.done;
+  await setLastChangeDate();
 }
 
 // Seed initial data for development
