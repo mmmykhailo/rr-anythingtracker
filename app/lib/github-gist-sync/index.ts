@@ -1,8 +1,18 @@
+import {
+  encryptJSON,
+  decryptJSON,
+  isEncryptedEnvelope,
+  createEncryptedEnvelope,
+  extractFromEncryptedEnvelope,
+  isCryptoSupported,
+} from "~/lib/crypto";
+
 // Storage keys for GitHub sync configuration
 export const STORAGE_KEYS = {
   GITHUB_TOKEN: "github_token",
   GIST_ID: "gist_id",
   ONBOARDING_COMPLETED: "onboarding_completed",
+  ENCRYPTION_ENABLED: "encryption_enabled",
 } as const;
 
 // Helper function to get credentials from localStorage
@@ -38,6 +48,24 @@ export function isOnboardingCompleted(): boolean {
 export function setOnboardingCompleted(): void {
   if (typeof window !== "undefined") {
     localStorage.setItem(STORAGE_KEYS.ONBOARDING_COMPLETED, "true");
+  }
+}
+
+// Helper function to check if encryption is enabled
+export function isEncryptionEnabled(): boolean {
+  if (typeof window === "undefined") {
+    return false;
+  }
+  return (
+    localStorage.getItem(STORAGE_KEYS.ENCRYPTION_ENABLED) === "true" &&
+    isCryptoSupported()
+  );
+}
+
+// Helper function to set encryption preference
+export function setEncryptionEnabled(enabled: boolean): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(STORAGE_KEYS.ENCRYPTION_ENABLED, String(enabled));
   }
 }
 
@@ -107,9 +135,22 @@ export async function uploadJsonToGist(
   const description = options.description || "JSON data sync";
 
   try {
+    // Check if encryption is enabled and encrypt the data if needed
+    let contentToUpload: any = data;
+    if (isEncryptionEnabled() && token) {
+      try {
+        contentToUpload = await createEncryptedEnvelope(data, token);
+        console.log("Data encrypted before upload");
+      } catch (encryptError) {
+        console.error("Failed to encrypt data:", encryptError);
+        // Optionally continue with unencrypted upload or throw
+        throw new Error("Failed to encrypt data for upload");
+      }
+    }
+
     const files: GistFiles = {
       [filename]: {
-        content: JSON.stringify(data, null, 2),
+        content: JSON.stringify(contentToUpload, null, 2),
       },
     };
 
@@ -196,9 +237,38 @@ export async function downloadJsonFromGist(
     const fileContent = gistData.files[filename].content;
 
     try {
-      const jsonData = JSON.parse(fileContent);
+      const parsedData = JSON.parse(fileContent);
+
+      // Check if the data is encrypted and decrypt if needed
+      if (isEncryptedEnvelope(parsedData)) {
+        if (!token) {
+          console.error(
+            "Encrypted data found but no token available for decryption"
+          );
+          return null;
+        }
+
+        try {
+          const decryptedData = await extractFromEncryptedEnvelope(
+            parsedData,
+            token
+          );
+          console.log("Data successfully decrypted after download");
+          return decryptedData;
+        } catch (decryptError) {
+          console.error("Failed to decrypt data:", decryptError);
+          // Check if encryption is disabled locally but data is encrypted
+          if (!isEncryptionEnabled()) {
+            console.warn(
+              "Data is encrypted but encryption is disabled locally. Enable encryption in settings to decrypt."
+            );
+          }
+          return null;
+        }
+      }
+
       console.log(`Successfully downloaded JSON from Gist (${filename})`);
-      return jsonData;
+      return parsedData;
     } catch (parseError) {
       console.error("Failed to parse JSON from Gist:", parseError);
       return null;

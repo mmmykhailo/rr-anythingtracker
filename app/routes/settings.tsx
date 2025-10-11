@@ -19,7 +19,7 @@ import {
   exportAllData,
   importAllDataWithConfirmation,
 } from "~/lib/data-operations";
-import { isSyncConfigured } from "~/lib/github-gist-sync";
+import { isSyncConfigured, isEncryptionEnabled } from "~/lib/github-gist-sync";
 
 export function meta() {
   return [
@@ -39,6 +39,7 @@ export default function SettingsPage() {
   const [isImporting, setIsImporting] = useState(false);
 
   const syncConfigured = isSyncConfigured();
+  const encryptionEnabled = isEncryptionEnabled();
 
   const handleExport = async () => {
     try {
@@ -151,6 +152,20 @@ export default function SettingsPage() {
                   {gitHubStatus.text}
                 </span>
               </div>
+              {syncConfigured && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm">Encryption</span>
+                  <span
+                    className={`text-sm font-medium ${
+                      encryptionEnabled
+                        ? "text-green-600 dark:text-green-400"
+                        : "text-gray-500"
+                    }`}
+                  >
+                    {encryptionEnabled ? "Enabled" : "Disabled"}
+                  </span>
+                </div>
+              )}
               <Separator />
               <Button
                 asChild

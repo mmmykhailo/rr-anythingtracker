@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { RefreshCw, CloudCheck, AlertCircle } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -10,6 +10,7 @@ import {
   isSyncConfigured,
   uploadJsonToGist,
   downloadJsonFromGist,
+  isEncryptionEnabled,
 } from "~/lib/github-gist-sync";
 import { exportData, importData, validateExportData } from "~/lib/data-export";
 import { cn } from "~/lib/utils";
@@ -31,13 +32,16 @@ interface SyncState {
 }
 
 const AUTO_SYNC_INTERVAL = 3 * 60 * 1000; // 3 minutes
-const STATUS_RESET_DELAY = 3000; // 3 seconds
 
 export function SyncButton() {
   const [syncState, setSyncState] = useState<SyncState>({
     status: "idle",
   });
   const [isConfigured, setIsConfigured] = useState(false);
+  const encryptionEnabled = useMemo(
+    () => isEncryptionEnabled(),
+    [isConfigured]
+  );
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const autoSyncIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -46,14 +50,6 @@ export function SyncButton() {
     if (statusTimeoutRef.current) {
       clearTimeout(statusTimeoutRef.current);
     }
-    statusTimeoutRef.current = setTimeout(() => {
-      setSyncState((prev) => ({
-        ...prev,
-        // Keep success status, only reset other statuses
-        status: prev.status === "success" ? "success" : "idle",
-        message: undefined,
-      }));
-    }, STATUS_RESET_DELAY);
   }, []);
 
   useEffect(() => {
@@ -274,8 +270,21 @@ export function SyncButton() {
         resetStatus();
       } catch (error) {
         console.error("Sync failed:", error);
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error";
+        let errorMessage =
+          error instanceof Error
+            ? error.message?.toLocaleLowerCase()
+            : "Unknown error";
+
+        // Provide more specific error messages for encryption-related failures
+        if (errorMessage?.includes("encrypt")) {
+          errorMessage = "Encryption failed. Check your GitHub token.";
+        } else if (errorMessage?.includes("decrypt")) {
+          errorMessage =
+            "Decryption failed. The data may be encrypted with a different token.";
+        } else if (errorMessage?.includes("invalid password")) {
+          errorMessage =
+            "Unable to decrypt data. GitHub token may have changed.";
+        }
 
         setSyncState((prev) => ({
           ...prev,
@@ -355,6 +364,10 @@ export function SyncButton() {
         timeAgo = "Just now";
       }
       content += `\nLast synced: ${timeAgo}`;
+    }
+
+    if (encryptionEnabled) {
+      content += "\n🔒 Encryption enabled";
     }
 
     content += "\n\nClick to sync now";

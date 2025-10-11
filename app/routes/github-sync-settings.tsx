@@ -1,9 +1,10 @@
-import { ChevronLeft, Save, Github, Info, X } from "lucide-react";
-import { useState } from "react";
+import { ChevronLeft, Save, Github, Info, X, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
   Card,
   CardContent,
@@ -11,7 +12,14 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import { STORAGE_KEYS } from "~/lib/github-gist-sync";
+import {
+  STORAGE_KEYS,
+  isEncryptionEnabled,
+  setEncryptionEnabled,
+  downloadJsonFromGist,
+} from "~/lib/github-gist-sync";
+import { isCryptoSupported } from "~/lib/crypto";
+import { EncryptionMigrationInfo } from "~/components/EncryptionMigrationInfo";
 
 export function meta() {
   return [
@@ -34,13 +42,39 @@ export default function GitHubSyncSettingsPage() {
   const [gistId, setGistId] = useState(
     () => localStorage.getItem(STORAGE_KEYS.GIST_ID) || ""
   );
+  const savedEncryptionEnabled = isEncryptionEnabled(); // The actual saved state
+  const [encryptionEnabled, setEncryptionEnabledState] = useState(
+    () => savedEncryptionEnabled
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<{ token?: string; gist?: string }>({});
   const [showTokenInfo, setShowTokenInfo] = useState(false);
   const [showGistInfo, setShowGistInfo] = useState(false);
+  const [showEncryptionInfo, setShowEncryptionInfo] = useState(false);
+  const [hasExistingGistData, setHasExistingGistData] = useState(false);
 
   // Check if coming from onboarding
   const isFromOnboarding = location.state?.from === "onboarding";
+
+  // Check if there's existing data in the Gist
+  useEffect(() => {
+    async function checkExistingData() {
+      if (githubToken && gistId) {
+        try {
+          const data = await downloadJsonFromGist({
+            token: githubToken,
+            gistId: gistId,
+            filename: "anythingtracker-data.json",
+          });
+          setHasExistingGistData(!!data);
+        } catch (error) {
+          // Ignore errors, assume no data
+          setHasExistingGistData(false);
+        }
+      }
+    }
+    checkExistingData();
+  }, [githubToken, gistId]);
 
   const handleSave = async () => {
     setErrors({});
@@ -69,6 +103,7 @@ export default function GitHubSyncSettingsPage() {
 
       localStorage.setItem(STORAGE_KEYS.GITHUB_TOKEN, githubToken.trim());
       localStorage.setItem(STORAGE_KEYS.GIST_ID, gistId.trim());
+      setEncryptionEnabled(encryptionEnabled);
 
       navigate("/", { replace: true });
     } catch (error) {
@@ -207,6 +242,56 @@ export default function GitHubSyncSettingsPage() {
             <div className="text-red-600 text-sm">{errors.gist}</div>
           )}
         </div>
+
+        <div className="grid items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="encryptionEnabled"
+              checked={encryptionEnabled}
+              onCheckedChange={(checked) => {
+                setEncryptionEnabledState(checked as boolean);
+              }}
+              disabled={!isCryptoSupported()}
+            />
+            <Label
+              htmlFor="encryptionEnabled"
+              className="flex items-center gap-2 cursor-pointer"
+            >
+              <Shield className="h-4 w-4" />
+              Encrypt data before upload
+            </Label>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-4 w-4 p-0 ml-1"
+              onClick={() => setShowEncryptionInfo(!showEncryptionInfo)}
+            >
+              <Info className="h-3 w-3" />
+            </Button>
+          </div>
+          {showEncryptionInfo && (
+            <div className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
+              When enabled, your data will be encrypted using AES-256-GCM before
+              uploading to GitHub. The encryption key is derived from your
+              GitHub token, so only you can decrypt the data. This adds an extra
+              layer of security to your backups.
+            </div>
+          )}
+          {!isCryptoSupported() && (
+            <div className="text-xs text-yellow-600 dark:text-yellow-400">
+              Encryption is not supported in your browser. Please use a modern
+              browser with Web Crypto API support.
+            </div>
+          )}
+        </div>
+
+        {hasExistingGistData &&
+          encryptionEnabled !== savedEncryptionEnabled && (
+            <EncryptionMigrationInfo
+              hasExistingData={true}
+              isEncryptionEnabled={encryptionEnabled}
+            />
+          )}
 
         <div className="flex flex-col gap-3 mt-4">
           <Button onClick={handleSave} disabled={isSaving}>
