@@ -97,7 +97,7 @@ export function EntryInput({
           </div>
 
           {!!quickAddValues && (
-            <div className="flex gap-4">
+            <div className="flex gap-4 overflow-auto -mb-2 pb-2 -mx-4 w-[calc(100%+2rem)] px-4">
               {quickAddValues.map(({ label, value }) => (
                 <Button
                   variant="outline"
