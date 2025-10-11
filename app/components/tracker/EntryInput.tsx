@@ -74,12 +74,12 @@ export function EntryInput({
       {tracker.type === "checkbox" ? (
         <div className="flex items-center gap-3">
           <Checkbox
-            id="isTrackedToday"
+            id="isTrackedOnSelectedDate"
             checked={currentValue > 0}
             onCheckedChange={onCheckboxChange}
             disabled={entryLoading}
           />
-          <Label htmlFor="isTrackedToday">Tracked today</Label>
+          <Label htmlFor="isTrackedOnSelectedDate">Tracked</Label>
         </div>
       ) : tracker.isNumber ? (
         <>
