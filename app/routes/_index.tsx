@@ -2,6 +2,7 @@ import { addDays, format } from "date-fns";
 import {
   BarChart3,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Edit,
@@ -28,6 +29,7 @@ import { formatStoredValue } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
 import { SyncButton } from "~/components/SyncButton";
 import { isOnboardingCompleted } from "~/lib/github-gist-sync";
+import clsx from "clsx";
 
 const DAYS_TO_SHOW = 4;
 
@@ -59,6 +61,9 @@ export default function Home() {
   const { removeTracker, loading: mutationLoading } = useTrackerMutations();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
+  const [expandedTrackers, setExpandedTrackers] = useState<Set<string>>(
+    new Set()
+  );
 
   // Sort trackers so children appear immediately under their parents
   const sortedTrackers = (() => {
@@ -68,7 +73,7 @@ export default function Home() {
     const result = [];
     for (const parent of parentTrackers) {
       result.push(parent);
-      // Add all children of this parent immediately after it
+      // Always add children for transition purposes
       const children = childTrackers.filter(
         (child) => child.parentId === parent.id
       );
@@ -77,11 +82,31 @@ export default function Home() {
 
     // Add any orphaned children (whose parents don't exist) at the end
     const includedIds = new Set(result.map((t) => t.id));
-    const orphans = trackers.filter((t) => !includedIds.has(t.id));
+    const orphans = trackers.filter(
+      (t) => !includedIds.has(t.id) && t.parentId
+    );
     result.push(...orphans);
 
     return result;
   })();
+
+  // Check if a tracker has children
+  const hasChildren = (trackerId: string) => {
+    return trackers.some((t) => t.parentId === trackerId);
+  };
+
+  // Toggle expanded state for a parent tracker
+  const toggleExpanded = (trackerId: string) => {
+    setExpandedTrackers((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(trackerId)) {
+        newSet.delete(trackerId);
+      } else {
+        newSet.add(trackerId);
+      }
+      return newSet;
+    });
+  };
 
   // Check if onboarding is completed
   useEffect(() => {
@@ -205,28 +230,54 @@ export default function Home() {
           </div>
         ) : (
           sortedTrackers.map((tracker) => (
-            <div key={tracker.title} className="relative">
+            <div
+              key={tracker.title}
+              className={cn(
+                "relative",
+                tracker.parentId &&
+                  "overflow-hidden transition-all duration-300 ease-in-out",
+                tracker.parentId && expandedTrackers.has(tracker.parentId)
+                  ? "max-h-20 opacity-100"
+                  : tracker.parentId
+                  ? "max-h-0 opacity-0"
+                  : ""
+              )}
+            >
               <Separator />
               <ContextMenu>
                 <ContextMenuTrigger asChild>
                   <div className="relative flex items-stretch cursor-context-menu">
                     <div className="w-1/3 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center">
-                      {tracker.title}
-                      {tracker.parentId && (
-                        <div className="text-xs text-gray-500 opacity-75">
-                          →{" "}
-                          {
-                            sortedTrackers.find(
-                              (t) => t.id === tracker.parentId
-                            )?.title
-                          }
-                        </div>
-                      )}
-                      <Link
-                        to={`/${tracker.id}/log-entry`}
-                        prefetch="viewport"
+                      <div className="flex items-center gap-1">
+                        {!tracker.parentId && hasChildren(tracker.id) && (
+                          <span className="mr-1">
+                            {expandedTrackers.has(tracker.id) ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
+                            )}
+                          </span>
+                        )}
+                        <span
+                          className={clsx({
+                            "ml-8": tracker.parentId,
+                          })}
+                        >
+                          {tracker.title}
+                        </span>
+                      </div>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleExpanded(tracker.id);
+                        }}
+                        aria-label={
+                          expandedTrackers.has(tracker.id)
+                            ? "Collapse"
+                            : "Expand"
+                        }
                         className="absolute inset-0"
-                        aria-label={`Open ${tracker.title} tracker`}
                       />
                     </div>
                     <div
