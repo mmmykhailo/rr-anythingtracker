@@ -2,11 +2,9 @@ import { formatDateString } from "./dates";
 import {
   clearAllData,
   getAllTrackers,
-  getTrackerById,
-  saveTracker,
-  updateTracker,
+  saveTrackerWithId,
   getEntryHistory,
-  createEntry,
+  createEntryWithId,
   getLastChangeDate,
   setLastChangeDate,
 } from "./db";
@@ -73,47 +71,32 @@ export async function importData(
     await clearAllData();
   }
 
-  // Set the last change date from imported data
   if (exportData.lastChangeDate) {
     await setLastChangeDate(new Date(exportData.lastChangeDate));
   }
 
-  // Create a mapping from old IDs to new IDs
-  const idMapping: Record<string, string> = {};
-
-  // First pass: Create all trackers without parentId and build ID mapping
   for (const trackerData of exportData.trackers) {
-    const tracker = await saveTracker({
-      title: trackerData.title,
-      type: trackerData.type as any,
-      isNumber: trackerData.isNumber,
-      goal: trackerData.goal,
-      // Don't set parentId yet
-    });
+    await saveTrackerWithId(
+      {
+        id: trackerData.id,
+        title: trackerData.title,
+        type: trackerData.type as any,
+        isNumber: trackerData.isNumber,
+        goal: trackerData.goal,
+        parentId: trackerData.parentId,
+      },
+      true
+    );
 
-    // Map old ID to new ID
-    idMapping[trackerData.id] = tracker.id;
-  }
-
-  // Second pass: Update parent-child relationships and add entries
-  for (const trackerData of exportData.trackers) {
-    const newTrackerId = idMapping[trackerData.id];
-
-    // Update parentId if it exists
-    if (trackerData.parentId) {
-      const newParentId = idMapping[trackerData.parentId];
-      if (newParentId) {
-        const tracker = await getTrackerById(newTrackerId);
-        if (tracker) {
-          tracker.parentId = newParentId;
-          await updateTracker(tracker, true);
-        }
-      }
-    }
-
-    // Import entries as individual entries to preserve history
     for (const entry of trackerData.entries) {
-      await createEntry(newTrackerId, entry.date, entry.value, true, true);
+      await createEntryWithId(
+        entry.id,
+        trackerData.id,
+        entry.date,
+        entry.value,
+        new Date(entry.createdAt),
+        true
+      );
     }
   }
 }

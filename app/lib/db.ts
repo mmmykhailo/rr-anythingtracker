@@ -152,6 +152,25 @@ export async function saveTracker(
   return newTracker;
 }
 
+// Save tracker with specific ID (used for data import)
+export async function saveTrackerWithId(
+  tracker: Omit<Tracker, "values">,
+  skipDateUpdate = false
+): Promise<Tracker> {
+  const db = await getDB();
+
+  const newTracker: Tracker = {
+    ...tracker,
+    values: {},
+  };
+
+  await db.put("trackers", newTracker);
+  if (!skipDateUpdate) {
+    await setLastChangeDate();
+  }
+  return newTracker;
+}
+
 export async function updateTracker(
   tracker: Tracker,
   skipDateUpdate = false
@@ -408,6 +427,31 @@ export async function createEntry(
     if (tracker?.parentId) {
       await createEntry(tracker.parentId, date, value, false, true);
     }
+  }
+}
+
+// Create entry with specific ID (used for data import)
+export async function createEntryWithId(
+  entryId: string,
+  trackerId: string,
+  date: string,
+  value: number,
+  createdAt: Date,
+  skipDateUpdate: boolean = false
+): Promise<void> {
+  const db = await getDB();
+
+  const entry = {
+    id: entryId,
+    trackerId,
+    date,
+    value,
+    createdAt,
+  };
+
+  await db.put("entries", entry);
+  if (!skipDateUpdate) {
+    await setLastChangeDate();
   }
 }
 
