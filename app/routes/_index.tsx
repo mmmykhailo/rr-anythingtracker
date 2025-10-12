@@ -61,9 +61,15 @@ export default function Home() {
   const { removeTracker, loading: mutationLoading } = useTrackerMutations();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
-  const [expandedTrackers, setExpandedTrackers] = useState<Set<string>>(
-    new Set()
-  );
+  const [expandedTrackers, setExpandedTrackers] = useState<Set<string>>(() => {
+    // Load expanded trackers from localStorage
+    try {
+      const stored = localStorage.getItem("expandedTrackers");
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
 
   // Sort trackers so children appear immediately under their parents
   const sortedTrackers = (() => {
@@ -104,6 +110,11 @@ export default function Home() {
       } else {
         newSet.add(trackerId);
       }
+      // Save to localStorage
+      localStorage.setItem(
+        "expandedTrackers",
+        JSON.stringify(Array.from(newSet))
+      );
       return newSet;
     });
   };
