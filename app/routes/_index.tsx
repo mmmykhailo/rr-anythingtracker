@@ -60,6 +60,29 @@ export default function Home() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
 
+  // Sort trackers so children appear immediately under their parents
+  const sortedTrackers = (() => {
+    const parentTrackers = trackers.filter((t) => !t.parentId);
+    const childTrackers = trackers.filter((t) => t.parentId);
+
+    const result = [];
+    for (const parent of parentTrackers) {
+      result.push(parent);
+      // Add all children of this parent immediately after it
+      const children = childTrackers.filter(
+        (child) => child.parentId === parent.id
+      );
+      result.push(...children);
+    }
+
+    // Add any orphaned children (whose parents don't exist) at the end
+    const includedIds = new Set(result.map((t) => t.id));
+    const orphans = trackers.filter((t) => !includedIds.has(t.id));
+    result.push(...orphans);
+
+    return result;
+  })();
+
   // Check if onboarding is completed
   useEffect(() => {
     if (isInitialized && !isOnboardingCompleted()) {
@@ -176,12 +199,12 @@ export default function Home() {
             })}
           </div>
         </div>
-        {trackers.length === 0 ? (
+        {sortedTrackers.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No trackers yet. Create your first tracker to get started!
           </div>
         ) : (
-          trackers.map((tracker) => (
+          sortedTrackers.map((tracker) => (
             <div key={tracker.title} className="relative">
               <Separator />
               <ContextMenu>
@@ -193,8 +216,9 @@ export default function Home() {
                         <div className="text-xs text-gray-500 opacity-75">
                           →{" "}
                           {
-                            trackers.find((t) => t.id === tracker.parentId)
-                              ?.title
+                            sortedTrackers.find(
+                              (t) => t.id === tracker.parentId
+                            )?.title
                           }
                         </div>
                       )}
