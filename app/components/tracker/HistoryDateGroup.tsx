@@ -33,16 +33,12 @@ export function HistoryDateGroup({
     }).format(new Date(dateString));
   };
 
-  const formatDateTime = (date: Date) => {
-    return new Intl.DateTimeFormat("en", {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(new Date(date));
-  };
+  // const formatTime = (date: Date) => {
+  //   return new Intl.DateTimeFormat("en", {
+  //     hour: "numeric",
+  //     minute: "2-digit",
+  //   }).format(new Date(date));
+  // };
 
   const formatEntryValue = (entry: HistoryEntry, tracker: Tracker) => {
     if (tracker.type === "checkbox") {
@@ -97,8 +93,13 @@ export function HistoryDateGroup({
                     {formatEntryValue(entry, tracker)}
                   </span>
                 </TableCell>
-                <TableCell className="text-xs text-gray-500">
-                  {formatDateTime(entry.createdAt)}
+                {/*<TableCell className="text-xs text-gray-500">
+                  {formatTime(entry.createdAt)}
+                </TableCell>*/}
+                <TableCell className="text-sm text-gray-600 dark:text-gray-400">
+                  {entry.comment && (
+                    <span className="italic">{entry.comment}</span>
+                  )}
                 </TableCell>
                 <TableCell className="w-12">
                   <Button

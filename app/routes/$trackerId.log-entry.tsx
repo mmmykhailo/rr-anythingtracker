@@ -79,9 +79,13 @@ export default function LogEntryPage() {
     }
   }, [tracker, getCurrentEntry, selectedDate, trackerId]);
 
-  const handleQuickAdd = async (valueToAdd: number) => {
+  const handleQuickAdd = async (valueToAdd: number, comment?: string) => {
     try {
-      const newValue = await addToCurrentEntry(valueToAdd, selectedDate);
+      const newValue = await addToCurrentEntry(
+        valueToAdd,
+        selectedDate,
+        comment
+      );
       setCurrentValue(newValue);
       await loadHistory(); // Refresh history after adding
     } catch (error) {
@@ -89,9 +93,9 @@ export default function LogEntryPage() {
     }
   };
 
-  const handleCheckboxChange = async (checked: boolean) => {
+  const handleCheckboxChange = async (checked: boolean, comment?: string) => {
     try {
-      await setEntry(checked ? 1 : 0, selectedDate);
+      await setEntry(checked ? 1 : 0, selectedDate, comment);
       setCurrentValue(checked ? 1 : 0);
       await loadHistory(); // Refresh history after updating
     } catch (error) {

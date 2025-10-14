@@ -20,8 +20,8 @@ type EntryInputProps = {
   tracker: Tracker;
   currentValue: number; // This is the stored integer value
   selectedDate: string;
-  onQuickAdd: (value: number) => Promise<void>; // Expects stored integer value
-  onCheckboxChange: (checked: boolean) => Promise<void>;
+  onQuickAdd: (value: number, comment?: string) => Promise<void>;
+  onCheckboxChange: (checked: boolean, comment?: string) => Promise<void>;
   entryLoading: boolean;
 };
 
@@ -34,6 +34,7 @@ export function EntryInput({
   entryLoading,
 }: EntryInputProps) {
   const [customInputValue, setCustomInputValue] = useState("");
+  const [comment, setComment] = useState("");
 
   const handleCustomAdd = async () => {
     // Parse the input to stored integer value
@@ -43,8 +44,9 @@ export function EntryInput({
     }
 
     try {
-      await onQuickAdd(storedValue);
+      await onQuickAdd(storedValue, comment);
       setCustomInputValue("");
+      setComment("");
     } catch (error) {
       console.error("Failed to add custom value:", error);
     }
@@ -72,15 +74,35 @@ export function EntryInput({
             })}`}
       </div>
       {tracker.type === "checkbox" ? (
-        <div className="flex items-center gap-3">
-          <Checkbox
-            id="isTrackedOnSelectedDate"
-            checked={currentValue > 0}
-            onCheckedChange={onCheckboxChange}
-            disabled={entryLoading}
-          />
-          <Label htmlFor="isTrackedOnSelectedDate">Tracked</Label>
-        </div>
+        <>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="isTrackedOnSelectedDate"
+              checked={currentValue > 0}
+              onCheckedChange={async (checked) => {
+                if (typeof checked === "boolean") {
+                  await onCheckboxChange(checked, comment);
+                  setComment("");
+                }
+              }}
+              disabled={entryLoading}
+            />
+            <Label htmlFor="isTrackedOnSelectedDate">Tracked</Label>
+          </div>
+          <div className="flex gap-4 items-center">
+            <Label htmlFor="checkboxComment" className="w-20">
+              Comment
+            </Label>
+            <Input
+              id="checkboxComment"
+              className="flex-1"
+              type="text"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a note (optional)"
+            />
+          </div>
+        </>
       ) : tracker.isNumber ? (
         <>
           <div>
@@ -96,13 +118,30 @@ export function EntryInput({
             </span>
           </div>
 
+          <div className="flex gap-4 items-center">
+            <Label htmlFor="comment" className="w-20">
+              Comment
+            </Label>
+            <Input
+              id="comment"
+              className="flex-1"
+              type="text"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add a note (optional)"
+            />
+          </div>
+
           {!!quickAddValues && (
             <div className="flex gap-4 overflow-auto -mb-2 pb-2 -mx-4 w-[calc(100%+2rem)] px-4">
               {quickAddValues.map(({ label, value }) => (
                 <Button
                   variant="outline"
                   key={value}
-                  onClick={() => onQuickAdd(value)}
+                  onClick={async () => {
+                    await onQuickAdd(value, comment);
+                    setComment("");
+                  }}
                   disabled={entryLoading}
                 >
                   <Plus /> {label}

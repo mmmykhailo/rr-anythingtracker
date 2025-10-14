@@ -24,6 +24,7 @@ export interface ExportData {
       id: string;
       date: string;
       value: number;
+      comment?: string;
       createdAt: string;
     }>;
   }>;
@@ -52,6 +53,7 @@ export async function exportData(): Promise<ExportData> {
             id: entry.id,
             date: entry.date,
             value: entry.value,
+            comment: entry.comment,
             createdAt: entry.createdAt.toISOString(),
           })),
         };
@@ -95,7 +97,8 @@ export async function importData(
         entry.date,
         entry.value,
         new Date(entry.createdAt),
-        true
+        true,
+        entry.comment
       );
     }
   }
@@ -176,7 +179,8 @@ export function validateExportData(data: any): data is ExportData {
             typeof entry.id === "string" &&
             typeof entry.date === "string" &&
             typeof entry.value === "number" &&
-            typeof entry.createdAt === "string"
+            typeof entry.createdAt === "string" &&
+            (entry.comment === undefined || typeof entry.comment === "string")
         )
     )
   );

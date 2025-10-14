@@ -104,12 +104,19 @@ export function useTrackerEntries(trackerId: string) {
   );
 
   const addToCurrentEntry = useCallback(
-    async (valueToAdd: number, date?: string) => {
+    async (valueToAdd: number, date?: string, comment?: string) => {
       const entryDate = date || formatDateString(new Date());
       try {
         setLoading(true);
         setError(null);
-        await createEntry(trackerId, entryDate, valueToAdd);
+        await createEntry(
+          trackerId,
+          entryDate,
+          valueToAdd,
+          false,
+          false,
+          comment
+        );
         const newValue = await getTotalValueForDate(trackerId, entryDate);
         return newValue;
       } catch (err) {
@@ -136,7 +143,7 @@ export function useTrackerEntries(trackerId: string) {
   );
 
   const setEntry = useCallback(
-    async (value: number, date?: string) => {
+    async (value: number, date?: string, comment?: string) => {
       const entryDate = date || formatDateString(new Date());
       try {
         setLoading(true);
@@ -155,7 +162,7 @@ export function useTrackerEntries(trackerId: string) {
         }
         // Then create new entry if value > 0
         if (value > 0) {
-          await createEntry(trackerId, entryDate, value);
+          await createEntry(trackerId, entryDate, value, false, false, comment);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to set entry");

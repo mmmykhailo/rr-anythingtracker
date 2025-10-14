@@ -3,5 +3,6 @@ export type HistoryEntry = {
   trackerId: string;
   date: string;
   value: number;
+  comment?: string;
   createdAt: Date;
 };

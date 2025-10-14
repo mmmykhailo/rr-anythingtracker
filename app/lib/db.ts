@@ -15,6 +15,7 @@ interface AnythingTrackerDB extends DBSchema {
       trackerId: string;
       date: string;
       value: number;
+      comment?: string;
       createdAt: Date;
     };
     indexes: {
@@ -264,7 +265,8 @@ export async function saveEntry(
   date: string,
   value: number,
   updateParent: boolean = true,
-  skipDateUpdate: boolean = false
+  skipDateUpdate: boolean = false,
+  comment?: string
 ): Promise<void> {
   const db = await getDB();
 
@@ -292,6 +294,7 @@ export async function saveEntry(
       trackerId,
       date,
       value,
+      comment,
       createdAt: new Date(),
     };
     await db.put("entries", entry);
@@ -319,7 +322,8 @@ export async function saveEntry(
           date,
           parentCurrentTotal + valueDifference,
           false,
-          skipDateUpdate
+          skipDateUpdate,
+          comment
         );
       }
     }
@@ -341,11 +345,12 @@ export async function getEntry(
 export async function addToEntry(
   trackerId: string,
   date: string,
-  valueToAdd: number
+  valueToAdd: number,
+  comment?: string
 ): Promise<number> {
   const currentValue = await getEntry(trackerId, date);
   const newValue = currentValue + valueToAdd;
-  await saveEntry(trackerId, date, newValue);
+  await saveEntry(trackerId, date, newValue, true, false, comment);
 
   // Also add to parent tracker if one exists
   const tracker = await getTrackerById(trackerId);
@@ -353,7 +358,14 @@ export async function addToEntry(
     // Use saveEntry directly with updateParent=false to prevent infinite recursion
     const parentCurrentValue = await getEntry(tracker.parentId, date);
     const parentNewValue = parentCurrentValue + valueToAdd;
-    await saveEntry(tracker.parentId, date, parentNewValue, false);
+    await saveEntry(
+      tracker.parentId,
+      date,
+      parentNewValue,
+      false,
+      false,
+      comment
+    );
   }
 
   return newValue;
@@ -384,6 +396,7 @@ export async function getEntryHistory(
     trackerId: string;
     date: string;
     value: number;
+    comment?: string;
     createdAt: Date;
   }>
 > {
@@ -404,7 +417,8 @@ export async function createEntry(
   date: string,
   value: number,
   ignoreParent: boolean = false,
-  skipDateUpdate: boolean = false
+  skipDateUpdate: boolean = false,
+  comment?: string
 ): Promise<void> {
   const db = await getDB();
 
@@ -413,6 +427,7 @@ export async function createEntry(
     trackerId,
     date,
     value,
+    comment,
     createdAt: new Date(),
   };
 
@@ -425,7 +440,7 @@ export async function createEntry(
   if (!ignoreParent) {
     const tracker = await getTrackerById(trackerId);
     if (tracker?.parentId) {
-      await createEntry(tracker.parentId, date, value, false, true);
+      await createEntry(tracker.parentId, date, value, false, true, comment);
     }
   }
 }
@@ -437,7 +452,8 @@ export async function createEntryWithId(
   date: string,
   value: number,
   createdAt: Date,
-  skipDateUpdate: boolean = false
+  skipDateUpdate: boolean = false,
+  comment?: string
 ): Promise<void> {
   const db = await getDB();
 
@@ -446,6 +462,7 @@ export async function createEntryWithId(
     trackerId,
     date,
     value,
+    comment,
     createdAt,
   };
 
