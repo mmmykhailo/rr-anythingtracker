@@ -105,9 +105,9 @@ export function HistoryDateGroup({
                   {entry.comment && (
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="text-ellipsis max-w-full overflow-hidden">
+                        <span className="text-ellipsis max-w-full overflow-hidden inline-block">
                           {entry.comment}
-                        </div>
+                        </span>
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
                         <p className="break-words">{entry.comment}</p>
