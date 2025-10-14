@@ -1,6 +1,11 @@
 import { Calendar, Trash2 } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import { Table, TableBody, TableCell, TableRow } from "~/components/ui/table";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "~/components/ui/tooltip";
 import { formatDateString } from "~/lib/dates";
 import type { HistoryEntry } from "~/lib/history";
 import type { Tracker } from "~/lib/trackers";
@@ -84,7 +89,7 @@ export function HistoryDateGroup({
       </div>
 
       <div className="border rounded-2xl overflow-hidden">
-        <Table>
+        <Table className="table-fixed">
           <TableBody>
             {entries.map((entry) => (
               <TableRow key={entry.id}>
@@ -98,7 +103,16 @@ export function HistoryDateGroup({
                 </TableCell>*/}
                 <TableCell className="text-sm text-gray-600 dark:text-gray-400">
                   {entry.comment && (
-                    <span className="italic">{entry.comment}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="text-ellipsis max-w-full overflow-hidden">
+                          {entry.comment}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="break-words">{entry.comment}</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                 </TableCell>
                 <TableCell className="w-12">
