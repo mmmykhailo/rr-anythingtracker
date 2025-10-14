@@ -26,10 +26,10 @@ import { formatDateForDisplay, getDaysArray, isDateToday } from "~/lib/dates";
 import { useDatabase, useTrackerMutations } from "~/lib/hooks";
 import { getAllTrackers } from "~/lib/db";
 import { formatStoredValue } from "~/lib/number-conversions";
-import { cn } from "~/lib/utils";
 import { SyncButton } from "~/components/SyncButton";
 import { isOnboardingCompleted } from "~/lib/github-gist-sync";
 import clsx from "clsx";
+import type { Tracker } from "~/lib/trackers";
 
 const DAYS_TO_SHOW = 4;
 
@@ -73,32 +73,61 @@ export default function Home() {
 
   // Sort trackers so children appear immediately under their parents
   const sortedTrackers = (() => {
-    const parentTrackers = trackers.filter((t) => !t.parentId);
-    const childTrackers = trackers.filter((t) => t.parentId);
+    const resultTrackers: Array<Tracker> = [];
+    const includedIds = new Set();
 
-    const result = [];
-    for (const parent of parentTrackers) {
-      result.push(parent);
-      // Always add children for transition purposes
-      const children = childTrackers.filter(
-        (child) => child.parentId === parent.id
+    // Recursive function to add a tracker and all its descendants
+    const addTrackerWithDescendants = (tracker: Tracker) => {
+      if (includedIds.has(tracker.id)) return;
+
+      resultTrackers.push(tracker);
+      includedIds.add(tracker.id);
+
+      // Find and add all direct children recursively
+      const children = trackers.filter(
+        (child) => child.parentId === tracker.id
       );
-      result.push(...children);
+      for (const child of children) {
+        addTrackerWithDescendants(child);
+      }
+    };
+
+    // Start with parent trackers (those with no parentId)
+    const parentTrackers = trackers.filter((t) => !t.parentId);
+    for (const parent of parentTrackers) {
+      addTrackerWithDescendants(parent);
     }
 
     // Add any orphaned children (whose parents don't exist) at the end
-    const includedIds = new Set(result.map((t) => t.id));
     const orphans = trackers.filter(
       (t) => !includedIds.has(t.id) && t.parentId
     );
-    result.push(...orphans);
+    for (const orphan of orphans) {
+      addTrackerWithDescendants(orphan);
+    }
 
-    return result;
+    return resultTrackers;
   })();
 
   // Check if a tracker has children
   const hasChildren = (trackerId: string) => {
     return trackers.some((t) => t.parentId === trackerId);
+  };
+
+  // Check if the top-level parent of a tracker is expanded
+  const areAllAncestorsExpanded = (tracker: (typeof trackers)[0]): boolean => {
+    if (!tracker.parentId) return true; // Top-level trackers are always visible
+
+    // Find the top-level parent by traversing up the hierarchy
+    let currentTracker = tracker;
+    while (currentTracker.parentId) {
+      const parent = trackers.find((t) => t.id === currentTracker.parentId);
+      if (!parent) return false; // Orphaned child
+      currentTracker = parent;
+    }
+
+    // Check if the top-level parent is expanded
+    return expandedTrackers.has(currentTracker.id);
   };
 
   // Toggle expanded state for a parent tracker
@@ -224,7 +253,7 @@ export default function Home() {
               return (
                 <div
                   key={dateString}
-                  className={cn("py-1", {
+                  className={clsx("py-1", {
                     "text-blue-500 font-bold": isTodayDate,
                   })}
                 >
@@ -243,11 +272,13 @@ export default function Home() {
           sortedTrackers.map((tracker) => (
             <div
               key={tracker.title}
-              className={cn(
+              className={clsx(
                 "relative",
-                tracker.parentId &&
-                  "overflow-hidden transition-all duration-300 ease-in-out",
-                tracker.parentId && expandedTrackers.has(tracker.parentId)
+                {
+                  "overflow-hidden transition-all duration-300 ease-in-out":
+                    tracker.parentId,
+                },
+                tracker.parentId && areAllAncestorsExpanded(tracker)
                   ? "max-h-20 opacity-100"
                   : tracker.parentId
                   ? "max-h-0 opacity-0"
@@ -302,7 +333,7 @@ export default function Home() {
 
                         return (
                           <div
-                            className={cn(
+                            className={clsx(
                               "text-center flex flex-col justify-center leading-none gap-1 p-2 relative transition-colors hover:bg-accent",
                               {
                                 "opacity-50": value === 0,
