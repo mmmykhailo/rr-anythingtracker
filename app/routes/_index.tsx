@@ -281,17 +281,17 @@ export default function Home() {
                 tracker.parentId && areAllAncestorsExpanded(tracker)
                   ? "max-h-20 opacity-100"
                   : tracker.parentId
-                    ? "max-h-0 opacity-0"
-                    : ""
+                  ? "max-h-0 opacity-0"
+                  : ""
               )}
             >
               <Separator />
               <ContextMenu>
                 <ContextMenuTrigger asChild>
                   <div className="relative flex items-stretch cursor-context-menu">
-                    <div className="w-1/3 min-h-full font-medium p-2 pl-0 relative transition-colors hover:bg-accent flex flex-col justify-center">
-                      <div className="flex items-center gap-0">
-                        {!tracker.parentId && hasChildren(tracker.id) && (
+                    <div className="w-1/3 flex items-stretch">
+                      {!tracker.parentId && hasChildren(tracker.id) && (
+                        <div className="w-8 flex-shrink-0">
                           <button
                             onClick={(e) => {
                               e.preventDefault();
@@ -303,35 +303,29 @@ export default function Home() {
                                 ? "Collapse"
                                 : "Expand"
                             }
-                            className="my-auto p-2 cursor-pointer"
+                            className="w-full h-full cursor-pointer transition-colors hover:bg-accent flex items-center justify-center"
                           >
-                            {!tracker.parentId && hasChildren(tracker.id) && (
-                              <span className="">
-                                {expandedTrackers.has(tracker.id) ? (
-                                  <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4" />
-                                )}
-                              </span>
+                            {expandedTrackers.has(tracker.id) ? (
+                              <ChevronDown className="h-4 w-4" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4" />
                             )}
                           </button>
-                        )}
-
-                        <Link
-                          to={`/${tracker.id}/log-entry`}
-                          prefetch="viewport"
+                        </div>
+                      )}
+                      <Link
+                        to={`/${tracker.id}/log-entry`}
+                        prefetch="viewport"
+                        className="flex-1 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center"
+                      >
+                        <span
+                          className={clsx("block text-xs", {
+                            "ml-8": tracker.parentId,
+                          })}
                         >
-                          <span
-                            className={clsx("block text-xs", {
-                              "ml-2":
-                                !tracker.parentId && !hasChildren(tracker.id),
-                              "ml-8": tracker.parentId,
-                            })}
-                          >
-                            {tracker.title}
-                          </span>
-                        </Link>
-                      </div>
+                          {tracker.title}
+                        </span>
+                      </Link>
                     </div>
                     <div
                       className="w-2/3 grid gap-1 shrink-0"
