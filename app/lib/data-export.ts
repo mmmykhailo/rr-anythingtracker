@@ -1,4 +1,3 @@
-import { formatDateString } from "./dates";
 import {
   clearAllData,
   getAllTrackers,

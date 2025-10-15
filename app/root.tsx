@@ -10,6 +10,7 @@ import {
 import type { Route } from "./+types/root";
 import "./app.css";
 import { DevUtils } from "~/components/dev-utils";
+import { SyncProvider } from "~/components/SyncProvider";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -48,10 +49,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body className="dark bg-background min-h-full">
-        <div className="root">
-          <div className="max-w-md mx-auto px-4">{children}</div>
-        </div>
-        <DevUtils />
+        <SyncProvider>
+          <div className="root">
+            <div className="max-w-md mx-auto px-4">{children}</div>
+          </div>
+          <DevUtils />
+        </SyncProvider>
         <ScrollRestoration />
         <Scripts />
       </body>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useState } from "react";
 import { RefreshCw, CloudCheck, AlertCircle } from "lucide-react";
 import { Button } from "~/components/ui/button";
 import {
@@ -6,298 +6,18 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "~/components/ui/tooltip";
-import {
-  isSyncConfigured,
-  uploadJsonToGist,
-  downloadJsonFromGist,
-  isEncryptionEnabled,
-} from "~/lib/github-gist-sync";
-import { exportData, importData, validateExportData } from "~/lib/data-export";
 import { cn } from "~/lib/utils";
-
-type SyncStatus =
-  | "idle"
-  | "uploading"
-  | "downloading"
-  | "checking"
-  | "success"
-  | "error"
-  | "conflict";
-
-interface SyncState {
-  status: SyncStatus;
-  message?: string;
-  lastSyncTime?: Date;
-  lastError?: string;
-}
-
-const AUTO_SYNC_INTERVAL = 3 * 60 * 1000; // 3 minutes
+import { useSync } from "./SyncProvider";
 
 export function SyncButton() {
-  const [syncState, setSyncState] = useState<SyncState>({
-    status: "idle",
-  });
-  const [isConfigured, setIsConfigured] = useState(false);
-  const encryptionEnabled = useMemo(
-    () => isEncryptionEnabled(),
-    [isConfigured]
-  );
+  const {
+    syncState,
+    isConfigured,
+    encryptionEnabled,
+    isRevalidating,
+    handleSync,
+  } = useSync();
   const [tooltipOpen, setTooltipOpen] = useState(false);
-  const autoSyncIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const statusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  const resetStatus = useCallback(() => {
-    if (statusTimeoutRef.current) {
-      clearTimeout(statusTimeoutRef.current);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Check if sync is configured
-    const configured = isSyncConfigured();
-    setIsConfigured(configured);
-
-    if (configured) {
-      // Load last sync time from localStorage
-      const lastSync = localStorage.getItem("last_sync_time");
-
-      setSyncState((prev) => ({
-        ...prev,
-        lastSyncTime: lastSync ? new Date(lastSync) : undefined,
-      }));
-
-      // Initiate first sync on page load
-      handleSync(true);
-
-      // Start auto-sync
-      autoSyncIntervalRef.current = setInterval(() => {
-        handleSync(true);
-      }, AUTO_SYNC_INTERVAL);
-    }
-
-    // Cleanup
-    return () => {
-      if (autoSyncIntervalRef.current) {
-        clearInterval(autoSyncIntervalRef.current);
-      }
-      if (statusTimeoutRef.current) {
-        clearTimeout(statusTimeoutRef.current);
-      }
-    };
-  }, [isConfigured]);
-
-  const handleSync = useCallback(
-    async (isAutoSync = false) => {
-      if (
-        !isConfigured ||
-        ["uploading", "downloading", "checking"].includes(syncState.status)
-      ) {
-        return;
-      }
-
-      try {
-        setSyncState((prev) => ({
-          ...prev,
-          status: "checking",
-          message: "Checking for changes...",
-        }));
-
-        // Get local data first
-        const localData = await exportData();
-
-        // First, try to download from Gist to check for remote changes
-        const remoteData = await downloadJsonFromGist({
-          filename: "anythingtracker-data.json",
-        });
-
-        let shouldUpload = true;
-        let syncAction = "none";
-
-        if (remoteData && validateExportData(remoteData)) {
-          // Check if this is first-time sync (no trackers in local data)
-          const isFirstSync = localData.trackers.length === 0;
-
-          if (isFirstSync) {
-            // First-time sync on new device - download remote data
-            setSyncState((prev) => ({
-              ...prev,
-              status: "downloading",
-              message: "First-time sync, downloading data...",
-            }));
-
-            await importData(remoteData, true);
-            shouldUpload = false;
-            syncAction = "downloaded";
-
-            const now = new Date();
-            localStorage.setItem("last_sync_time", now.toISOString());
-
-            setSyncState((prev) => ({
-              ...prev,
-              status: "success",
-              message: "Initial sync completed",
-              lastSyncTime: now,
-              lastError: undefined,
-            }));
-          } else {
-            // Compare timestamps to determine which data is newer
-            // Use lastChangeDate if available, otherwise fall back to exportDate
-            const localChangeDate = localData.lastChangeDate
-              ? new Date(localData.lastChangeDate)
-              : new Date(localData.exportDate);
-            const remoteChangeDate = remoteData.lastChangeDate
-              ? new Date(remoteData.lastChangeDate)
-              : new Date(remoteData.exportDate);
-
-            // Check if there are any changes (either local or remote is newer)
-            const hasChanges =
-              localChangeDate.getTime() !== remoteChangeDate.getTime();
-
-            if (!hasChanges) {
-              setSyncState((prev) => ({
-                ...prev,
-                status: "success",
-                message: "Auto-synced",
-                lastSyncTime: new Date(),
-                lastError: undefined,
-              }));
-              return;
-            }
-
-            if (remoteChangeDate > localChangeDate) {
-              // Remote data is newer
-              if (!isAutoSync) {
-                // For manual sync, ask user what to do
-                const confirmDownload = confirm(
-                  "Remote data is newer than local data. Do you want to download and replace local data? (Cancel to upload local data instead)"
-                );
-
-                if (confirmDownload) {
-                  setSyncState((prev) => ({
-                    ...prev,
-                    status: "downloading",
-                    message: "Downloading...",
-                  }));
-
-                  // Import remote data
-                  await importData(remoteData, true);
-                  shouldUpload = false;
-                  syncAction = "downloaded";
-
-                  const now = new Date();
-                  localStorage.setItem("last_sync_time", now.toISOString());
-
-                  setSyncState((prev) => ({
-                    ...prev,
-                    status: "success",
-                    message: "Downloaded from cloud",
-                    lastSyncTime: now,
-                    lastError: undefined,
-                  }));
-                }
-              } else {
-                // For auto-sync, download silently
-                setSyncState((prev) => ({
-                  ...prev,
-                  status: "downloading",
-                  message: "Auto-downloading...",
-                }));
-
-                await importData(remoteData, true);
-                shouldUpload = false;
-                syncAction = "downloaded";
-
-                const now = new Date();
-                localStorage.setItem("last_sync_time", now.toISOString());
-
-                setSyncState((prev) => ({
-                  ...prev,
-                  status: "success",
-                  message: "Auto-synced (downloaded)",
-                  lastSyncTime: now,
-                  lastError: undefined,
-                }));
-              }
-            }
-          }
-        }
-
-        if (shouldUpload) {
-          // Check if local data has changed since last sync
-          const lastSyncTime = localStorage.getItem("last_sync_time");
-          const localChangeDate = localData.lastChangeDate
-            ? new Date(localData.lastChangeDate)
-            : new Date(localData.exportDate);
-
-          // If last sync exists and local data hasn't changed since then, keep success status
-          if (lastSyncTime && syncState.status === "success") {
-            const lastSync = new Date(lastSyncTime);
-            if (localChangeDate <= lastSync) {
-              return; // No changes to upload, keep success status
-            }
-          }
-
-          setSyncState((prev) => ({
-            ...prev,
-            status: "uploading",
-            message: isAutoSync ? "Auto-uploading..." : "Uploading...",
-          }));
-
-          // Upload to Gist
-          const uploadSuccess = await uploadJsonToGist(localData, {
-            filename: "anythingtracker-data.json",
-            description: "AnythingTracker backup data",
-          });
-
-          if (uploadSuccess) {
-            const now = new Date();
-            localStorage.setItem("last_sync_time", now.toISOString());
-
-            setSyncState((prev) => ({
-              ...prev,
-              status: "success",
-              message: isAutoSync
-                ? "Auto-synced (uploaded)"
-                : "Uploaded to cloud",
-              lastSyncTime: now,
-              lastError: undefined,
-            }));
-          } else {
-            throw new Error("Failed to upload to GitHub Gist");
-          }
-        }
-
-        resetStatus();
-      } catch (error) {
-        console.error("Sync failed:", error);
-        let errorMessage =
-          error instanceof Error
-            ? error.message?.toLocaleLowerCase()
-            : "Unknown error";
-
-        // Provide more specific error messages for encryption-related failures
-        if (errorMessage?.includes("encrypt")) {
-          errorMessage = "Encryption failed. Check your GitHub token.";
-        } else if (errorMessage?.includes("decrypt")) {
-          errorMessage =
-            "Decryption failed. The data may be encrypted with a different token.";
-        } else if (errorMessage?.includes("invalid password")) {
-          errorMessage =
-            "Unable to decrypt data. GitHub token may have changed.";
-        }
-
-        setSyncState((prev) => ({
-          ...prev,
-          status: "error",
-          message: isAutoSync ? "Auto-sync failed" : "Sync failed",
-          lastError: errorMessage,
-        }));
-
-        resetStatus();
-      }
-    },
-    [isConfigured, syncState.status, resetStatus]
-  );
 
   // Don't render if sync is not configured
   if (!isConfigured) {
@@ -305,15 +25,25 @@ export function SyncButton() {
   }
 
   const getIcon = () => {
+    // Show spinning icon when revalidating data
+    if (isRevalidating) {
+      return <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />;
+    }
+
     switch (syncState.status) {
       case "checking":
       case "uploading":
       case "downloading":
         return <RefreshCw className="h-4 w-4 animate-spin text-foreground" />;
       case "success":
-        return (
-          <CloudCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
-        );
+      case "idle":
+        // Show success icon if we have a recent sync
+        if (syncState.lastSyncTime) {
+          return (
+            <CloudCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
+          );
+        }
+        return <RefreshCw className="h-4 w-4" />;
       case "error":
       case "conflict":
         return (
@@ -325,9 +55,12 @@ export function SyncButton() {
   };
 
   const getTooltipContent = () => {
-    let content = "Sync with cloud";
+    let content = "";
 
-    if (
+    // Check for revalidating state first
+    if (isRevalidating) {
+      content = "Refreshing data...";
+    } else if (
       syncState.status === "checking" ||
       syncState.status === "uploading" ||
       syncState.status === "downloading"
@@ -337,6 +70,8 @@ export function SyncButton() {
       content = "Sync complete";
     } else if (syncState.status === "error") {
       content = `Sync failed: ${syncState.lastError || "Unknown error"}`;
+    } else {
+      content = "Sync with cloud";
     }
 
     if (syncState.lastSyncTime) {
@@ -370,7 +105,13 @@ export function SyncButton() {
       content += "\n🔒 Encryption enabled";
     }
 
-    content += "\n\nClick to sync now";
+    // Don't show click hint when actively syncing or revalidating
+    if (
+      !isRevalidating &&
+      !["checking", "uploading", "downloading"].includes(syncState.status)
+    ) {
+      content += "\n\nClick to sync now";
+    }
 
     return content;
   };
@@ -382,9 +123,10 @@ export function SyncButton() {
           size="icon"
           variant="ghost"
           onClick={() => handleSync(false)}
-          disabled={["uploading", "downloading", "checking"].includes(
-            syncState.status
-          )}
+          disabled={
+            isRevalidating ||
+            ["uploading", "downloading", "checking"].includes(syncState.status)
+          }
           className={cn("h-8 w-8 transition-all relative")}
         >
           {getIcon()}
