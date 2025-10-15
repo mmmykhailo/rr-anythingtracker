@@ -289,38 +289,43 @@ export default function Home() {
               <ContextMenu>
                 <ContextMenuTrigger asChild>
                   <div className="relative flex items-stretch cursor-context-menu">
-                    <div className="w-1/3 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center">
-                      <div className="flex items-center gap-1">
-                        {!tracker.parentId && hasChildren(tracker.id) && (
-                          <span className="mr-1">
+                    <div className="w-1/3 flex items-stretch">
+                      {!tracker.parentId && hasChildren(tracker.id) && (
+                        <div className="w-8 flex-shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleExpanded(tracker.id);
+                            }}
+                            aria-label={
+                              expandedTrackers.has(tracker.id)
+                                ? "Collapse"
+                                : "Expand"
+                            }
+                            className="w-full h-full cursor-pointer transition-colors hover:bg-accent flex items-center justify-center"
+                          >
                             {expandedTrackers.has(tracker.id) ? (
                               <ChevronDown className="h-4 w-4" />
                             ) : (
                               <ChevronRight className="h-4 w-4" />
                             )}
-                          </span>
-                        )}
+                          </button>
+                        </div>
+                      )}
+                      <Link
+                        to={`/${tracker.id}/log-entry`}
+                        prefetch="viewport"
+                        className="flex-1 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center"
+                      >
                         <span
-                          className={clsx({
+                          className={clsx("block text-xs", {
                             "ml-8": tracker.parentId,
                           })}
                         >
                           {tracker.title}
                         </span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleExpanded(tracker.id);
-                        }}
-                        aria-label={
-                          expandedTrackers.has(tracker.id)
-                            ? "Collapse"
-                            : "Expand"
-                        }
-                        className="absolute inset-0"
-                      />
+                      </Link>
                     </div>
                     <div
                       className="w-2/3 grid gap-1 shrink-0"
