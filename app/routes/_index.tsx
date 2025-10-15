@@ -281,46 +281,57 @@ export default function Home() {
                 tracker.parentId && areAllAncestorsExpanded(tracker)
                   ? "max-h-20 opacity-100"
                   : tracker.parentId
-                  ? "max-h-0 opacity-0"
-                  : ""
+                    ? "max-h-0 opacity-0"
+                    : ""
               )}
             >
               <Separator />
               <ContextMenu>
                 <ContextMenuTrigger asChild>
                   <div className="relative flex items-stretch cursor-context-menu">
-                    <div className="w-1/3 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center">
-                      <div className="flex items-center gap-1">
+                    <div className="w-1/3 min-h-full font-medium p-2 pl-0 relative transition-colors hover:bg-accent flex flex-col justify-center">
+                      <div className="flex items-center gap-0">
                         {!tracker.parentId && hasChildren(tracker.id) && (
-                          <span className="mr-1">
-                            {expandedTrackers.has(tracker.id) ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              toggleExpanded(tracker.id);
+                            }}
+                            aria-label={
+                              expandedTrackers.has(tracker.id)
+                                ? "Collapse"
+                                : "Expand"
+                            }
+                            className="my-auto p-2 cursor-pointer"
+                          >
+                            {!tracker.parentId && hasChildren(tracker.id) && (
+                              <span className="">
+                                {expandedTrackers.has(tracker.id) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </span>
                             )}
-                          </span>
+                          </button>
                         )}
-                        <span
-                          className={clsx({
-                            "ml-8": tracker.parentId,
-                          })}
+
+                        <Link
+                          to={`/${tracker.id}/log-entry`}
+                          prefetch="viewport"
                         >
-                          {tracker.title}
-                        </span>
+                          <span
+                            className={clsx("block text-xs", {
+                              "ml-2":
+                                !tracker.parentId && !hasChildren(tracker.id),
+                              "ml-8": tracker.parentId,
+                            })}
+                          >
+                            {tracker.title}
+                          </span>
+                        </Link>
                       </div>
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          toggleExpanded(tracker.id);
-                        }}
-                        aria-label={
-                          expandedTrackers.has(tracker.id)
-                            ? "Collapse"
-                            : "Expand"
-                        }
-                        className="absolute inset-0"
-                      />
                     </div>
                     <div
                       className="w-2/3 grid gap-1 shrink-0"
