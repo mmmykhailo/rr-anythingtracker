@@ -65,9 +65,23 @@ export function SyncButton() {
       syncState.status === "uploading" ||
       syncState.status === "downloading"
     ) {
-      content = "Syncing...";
+      // Show what triggered the sync
+      if (syncState.triggeredBy === "data-change") {
+        content = "Syncing changes...";
+      } else if (syncState.triggeredBy === "auto") {
+        content = "Auto-syncing...";
+      } else {
+        content = "Syncing...";
+      }
     } else if (syncState.status === "success") {
-      content = "Sync complete";
+      // Show what triggered the last successful sync
+      if (syncState.triggeredBy === "data-change") {
+        content = "Changes synced";
+      } else if (syncState.triggeredBy === "auto") {
+        content = "Auto-synced";
+      } else {
+        content = "Sync complete";
+      }
     } else if (syncState.status === "error") {
       content = `Sync failed: ${syncState.lastError || "Unknown error"}`;
     } else {
@@ -122,12 +136,19 @@ export function SyncButton() {
         <Button
           size="icon"
           variant="ghost"
-          onClick={() => handleSync(false)}
+          onClick={() => handleSync(false, "manual")}
           disabled={
             isRevalidating ||
             ["uploading", "downloading", "checking"].includes(syncState.status)
           }
-          className={cn("h-8 w-8 transition-all relative")}
+          className={cn(
+            "h-8 w-8 transition-all relative",
+            syncState.triggeredBy === "data-change" &&
+              ["uploading", "downloading", "checking"].includes(
+                syncState.status
+              ) &&
+              "animate-pulse ring-2 ring-blue-500/50"
+          )}
         >
           {getIcon()}
         </Button>

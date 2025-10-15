@@ -13,6 +13,7 @@ import {
   initDB,
 } from "./db";
 import { formatDateString } from "./dates";
+import { debouncedDataChange } from "./data-change-events";
 
 // Hook to initialize the database
 export function useDatabase() {
@@ -48,6 +49,9 @@ export function useTrackerMutations() {
         setLoading(true);
         setError(null);
         const newTracker = await saveTracker(tracker);
+        debouncedDataChange.dispatch("tracker_created", {
+          trackerId: newTracker.id,
+        });
         return newTracker;
       } catch (err) {
         setError(
@@ -66,6 +70,9 @@ export function useTrackerMutations() {
       setLoading(true);
       setError(null);
       await deleteTracker(id);
+      debouncedDataChange.dispatch("tracker_deleted", {
+        trackerId: id,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete tracker");
       throw err;
@@ -118,6 +125,11 @@ export function useTrackerEntries(trackerId: string) {
           comment
         );
         const newValue = await getTotalValueForDate(trackerId, entryDate);
+        debouncedDataChange.dispatch("entry_added", {
+          trackerId,
+          date: entryDate,
+          value: valueToAdd,
+        });
         return newValue;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to add to entry");
@@ -164,6 +176,11 @@ export function useTrackerEntries(trackerId: string) {
         if (value > 0) {
           await createEntry(trackerId, entryDate, value, false, false, comment);
         }
+        debouncedDataChange.dispatch("entry_updated", {
+          trackerId,
+          date: entryDate,
+          value,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to set entry");
         throw err;
@@ -181,6 +198,10 @@ export function useTrackerEntries(trackerId: string) {
         setLoading(true);
         setError(null);
         await deleteEntry(trackerId, entryDate);
+        debouncedDataChange.dispatch("entry_deleted", {
+          trackerId,
+          date: entryDate,
+        });
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to delete entry");
         throw err;
@@ -211,6 +232,9 @@ export function useTrackerEntries(trackerId: string) {
       setLoading(true);
       setError(null);
       await deleteEntryById(entryId);
+      debouncedDataChange.dispatch("entry_deleted", {
+        trackerId,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete entry");
       throw err;

@@ -16,6 +16,10 @@ import {
   isEncryptionEnabled,
 } from "~/lib/github-gist-sync";
 import { exportData, importData, validateExportData } from "~/lib/data-export";
+import {
+  useDebouncedDataChangeListener,
+  type DebouncedChangeEvent,
+} from "~/lib/data-change-events";
 
 type SyncStatus =
   | "idle"
@@ -31,6 +35,7 @@ interface SyncState {
   message?: string;
   lastSyncTime?: Date;
   lastError?: string;
+  triggeredBy?: "manual" | "auto" | "data-change";
 }
 
 interface SyncContextValue {
@@ -38,7 +43,10 @@ interface SyncContextValue {
   isConfigured: boolean;
   encryptionEnabled: boolean;
   isRevalidating: boolean;
-  handleSync: (isAutoSync?: boolean) => Promise<void>;
+  handleSync: (
+    isAutoSync?: boolean,
+    triggeredBy?: "manual" | "auto" | "data-change"
+  ) => Promise<void>;
 }
 
 const SyncContext = createContext<SyncContextValue | undefined>(undefined);
@@ -67,7 +75,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const handleSync = useCallback(
-    async (isAutoSync = false) => {
+    async (
+      isAutoSync = false,
+      triggeredBy?: "manual" | "auto" | "data-change"
+    ) => {
       if (
         !isConfigured ||
         ["uploading", "downloading", "checking"].includes(syncState.status)
@@ -118,6 +129,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
               message: "Initial sync completed",
               lastSyncTime: now,
               lastError: undefined,
+              triggeredBy: triggeredBy || "auto",
             }));
 
             // Revalidate data to refresh components
@@ -175,9 +187,16 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                   setSyncState((prev) => ({
                     ...prev,
                     status: "success",
-                    message: "Downloaded from cloud",
+                    message:
+                      triggeredBy === "data-change"
+                        ? "Changes synced"
+                        : isAutoSync
+                        ? "Auto-synced"
+                        : "Synced",
                     lastSyncTime: now,
                     lastError: undefined,
+                    triggeredBy:
+                      triggeredBy || (isAutoSync ? "auto" : "manual"),
                   }));
 
                   // Revalidate data to refresh components
@@ -203,9 +222,10 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                 setSyncState((prev) => ({
                   ...prev,
                   status: "success",
-                  message: "Auto-synced (downloaded)",
+                  message: "Downloaded from cloud",
                   lastSyncTime: now,
                   lastError: undefined,
+                  triggeredBy: "manual",
                 }));
 
                 // Revalidate data to refresh components
@@ -235,7 +255,13 @@ export function SyncProvider({ children }: { children: ReactNode }) {
           setSyncState((prev) => ({
             ...prev,
             status: "uploading",
-            message: isAutoSync ? "Auto-uploading..." : "Uploading...",
+            message:
+              triggeredBy === "data-change"
+                ? "Uploading changes..."
+                : isAutoSync
+                ? "Auto-uploading..."
+                : "Uploading...",
+            triggeredBy: triggeredBy || (isAutoSync ? "auto" : "manual"),
           }));
 
           // Upload to Gist
@@ -251,11 +277,15 @@ export function SyncProvider({ children }: { children: ReactNode }) {
             setSyncState((prev) => ({
               ...prev,
               status: "success",
-              message: isAutoSync
-                ? "Auto-synced (uploaded)"
-                : "Uploaded to cloud",
+              message:
+                triggeredBy === "data-change"
+                  ? "Changes uploaded"
+                  : isAutoSync
+                  ? "Auto-synced (uploaded)"
+                  : "Uploaded to cloud",
               lastSyncTime: now,
               lastError: undefined,
+              triggeredBy: triggeredBy || (isAutoSync ? "auto" : "manual"),
             }));
           } else {
             throw new Error("Failed to upload to GitHub Gist");
@@ -311,7 +341,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       // Only initiate first sync on initial load (not on every route change)
       if (!hasInitialSyncRun.current) {
         hasInitialSyncRun.current = true;
-        handleSync(true);
+        handleSync(true, "auto");
       }
 
       // Clear any existing interval
@@ -321,7 +351,7 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
       // Start auto-sync
       autoSyncIntervalRef.current = setInterval(() => {
-        handleSync(true);
+        handleSync(true, "auto");
       }, AUTO_SYNC_INTERVAL);
     }
 
@@ -335,6 +365,26 @@ export function SyncProvider({ children }: { children: ReactNode }) {
       }
     };
   }, [isConfigured, handleSync]);
+
+  // Listen for debounced data changes and trigger auto-sync
+  useDebouncedDataChangeListener(
+    useCallback(
+      (event: DebouncedChangeEvent) => {
+        if (!isConfigured) return;
+
+        // Only trigger sync if we're not already syncing
+        setSyncState((prev) => {
+          if (!["uploading", "downloading", "checking"].includes(prev.status)) {
+            // Trigger auto-sync after data changes
+            handleSync(true, "data-change");
+          }
+          return prev;
+        });
+      },
+      [isConfigured, handleSync]
+    ),
+    [isConfigured, handleSync]
+  );
 
   const contextValue = useMemo(
     () => ({

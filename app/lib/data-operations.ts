@@ -4,6 +4,7 @@ import {
   importData,
   validateExportData,
 } from "./data-export";
+import { debouncedDataChange } from "./data-change-events";
 
 export interface DataOperationResult {
   success: boolean;
@@ -43,6 +44,7 @@ export async function importAllData(): Promise<DataOperationResult> {
     }
 
     await importData(data, true);
+    debouncedDataChange.dispatch("data_imported");
     return {
       success: true,
       message: "Data imported successfully. Please refresh the page.",
