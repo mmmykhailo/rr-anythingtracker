@@ -178,7 +178,7 @@ app/
 └── routes/            # React Router pages
     ├── _index.tsx     # Home page (tracker list with expand/collapse)
     ├── new-tracker.tsx # Create new tracker form
-    ├── $trackerId.log-entry.tsx # Log entries with history
+    ├── t.$trackerId.log-entry.tsx # Log entries with history
     ├── settings.tsx   # App settings and data management
     ├── github-sync-settings.tsx # GitHub sync configuration
     └── onboarding.tsx # Initial onboarding flow
