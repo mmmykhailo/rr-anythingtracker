@@ -1,7 +1,6 @@
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
-import { Checkbox } from "~/components/ui/checkbox";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { formatDateString } from "~/lib/dates";
@@ -75,33 +74,46 @@ export function EntryInput({
       </div>
       {tracker.type === "checkbox" ? (
         <>
-          <div className="flex items-center gap-3">
-            <Checkbox
-              id="isTrackedOnSelectedDate"
-              checked={currentValue > 0}
-              onCheckedChange={async (checked) => {
-                if (typeof checked === "boolean") {
-                  await onCheckboxChange(checked, comment);
-                  setComment("");
-                }
+          {currentValue > 0 ? (
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await onCheckboxChange(false, comment);
+                setComment("");
               }}
               disabled={entryLoading}
-            />
-            <Label htmlFor="isTrackedOnSelectedDate">Tracked</Label>
-          </div>
-          <div className="flex gap-4 items-center">
-            <Label htmlFor="checkboxComment" className="w-20">
-              Comment
-            </Label>
-            <Input
-              id="checkboxComment"
-              className="flex-1"
-              type="text"
-              value={comment}
-              onChange={(e) => setComment(e.target.value)}
-              placeholder="Add a note (optional)"
-            />
-          </div>
+              className="w-full"
+            >
+              <X /> Mark as Untracked
+            </Button>
+          ) : (
+            <>
+              <div className="flex gap-4 items-center">
+                <Label htmlFor="checkboxComment" className="w-20">
+                  Comment
+                </Label>
+                <Input
+                  id="checkboxComment"
+                  className="flex-1"
+                  type="text"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Add a note (optional)"
+                />
+              </div>
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  await onCheckboxChange(true, comment);
+                  setComment("");
+                }}
+                disabled={entryLoading}
+                className="w-full"
+              >
+                <Plus /> Mark as Tracked
+              </Button>
+            </>
+          )}
         </>
       ) : tracker.isNumber ? (
         <>
