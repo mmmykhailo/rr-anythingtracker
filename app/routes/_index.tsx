@@ -28,6 +28,7 @@ import { getAllTrackers } from "~/lib/db";
 import { formatStoredValue } from "~/lib/number-conversions";
 import { SyncButton } from "~/components/SyncButton";
 import { isOnboardingCompleted } from "~/lib/github-gist-sync";
+import { getShowHiddenTrackers } from "~/lib/user-settings";
 import clsx from "clsx";
 import type { Tracker } from "~/lib/trackers";
 
@@ -61,6 +62,9 @@ export default function Home() {
   const { removeTracker, loading: mutationLoading } = useTrackerMutations();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
+  const [showHiddenTrackers, setShowHiddenTrackers] = useState(() =>
+    getShowHiddenTrackers()
+  );
   const [expandedTrackers, setExpandedTrackers] = useState<Set<string>>(() => {
     // Load expanded trackers from localStorage
     try {
@@ -70,6 +74,23 @@ export default function Home() {
       return new Set();
     }
   });
+
+  // Listen for storage events to update showHiddenTrackers when changed in settings
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setShowHiddenTrackers(getShowHiddenTrackers());
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
+
+  // Filter trackers based on hidden status
+  const visibleTrackers = showHiddenTrackers
+    ? trackers
+    : trackers.filter((t) => !t.isHidden);
 
   // Sort trackers so children appear immediately under their parents
   const sortedTrackers = (() => {
@@ -84,7 +105,7 @@ export default function Home() {
       includedIds.add(tracker.id);
 
       // Find and add all direct children recursively
-      const children = trackers.filter(
+      const children = visibleTrackers.filter(
         (child) => child.parentId === tracker.id
       );
       for (const child of children) {
@@ -93,13 +114,13 @@ export default function Home() {
     };
 
     // Start with parent trackers (those with no parentId)
-    const parentTrackers = trackers.filter((t) => !t.parentId);
+    const parentTrackers = visibleTrackers.filter((t) => !t.parentId);
     for (const parent of parentTrackers) {
       addTrackerWithDescendants(parent);
     }
 
     // Add any orphaned children (whose parents don't exist) at the end
-    const orphans = trackers.filter(
+    const orphans = visibleTrackers.filter(
       (t) => !includedIds.has(t.id) && t.parentId
     );
     for (const orphan of orphans) {
@@ -109,19 +130,19 @@ export default function Home() {
     return resultTrackers;
   })();
 
-  // Check if a tracker has children
+  // Check if a tracker has children (considering visibility)
   const hasChildren = (trackerId: string) => {
-    return trackers.some((t) => t.parentId === trackerId);
+    return visibleTrackers.some((t) => t.parentId === trackerId);
   };
 
   // Check if the top-level parent of a tracker is expanded
-  const areAllAncestorsExpanded = (tracker: (typeof trackers)[0]): boolean => {
+  const areAllAncestorsExpanded = (tracker: (typeof visibleTrackers)[0]): boolean => {
     if (!tracker.parentId) return true; // Top-level trackers are always visible
 
     // Find the top-level parent by traversing up the hierarchy
     let currentTracker = tracker;
     while (currentTracker.parentId) {
-      const parent = trackers.find((t) => t.id === currentTracker.parentId);
+      const parent = visibleTrackers.find((t) => t.id === currentTracker.parentId);
       if (!parent) return false; // Orphaned child
       currentTracker = parent;
     }
