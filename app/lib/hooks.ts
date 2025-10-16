@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import type { Tracker } from "./trackers";
 import {
   saveTracker,
+  updateTracker,
   deleteTracker,
   saveEntry,
   deleteEntry,
@@ -65,6 +66,23 @@ export function useTrackerMutations() {
     []
   );
 
+  const modifyTracker = useCallback(async (tracker: Tracker) => {
+    try {
+      setLoading(true);
+      setError(null);
+      await updateTracker(tracker);
+      debouncedDataChange.dispatch("tracker_updated", {
+        trackerId: tracker.id,
+      });
+      return tracker;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update tracker");
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   const removeTracker = useCallback(async (id: string) => {
     try {
       setLoading(true);
@@ -85,6 +103,7 @@ export function useTrackerMutations() {
     loading,
     error,
     createTracker,
+    modifyTracker,
     removeTracker,
   };
 }
