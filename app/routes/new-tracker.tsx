@@ -5,6 +5,7 @@ import type { ClientLoaderFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
+import { Checkbox } from "~/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -52,6 +53,7 @@ interface TrackerFormData {
   type: TrackerType;
   goal?: number; // Stored as integer (e.g., milliliters for liters)
   parentId?: string;
+  isHidden: boolean;
 }
 
 export default function NewTrackerPage() {
@@ -68,6 +70,7 @@ export default function NewTrackerPage() {
       type: "none",
       goal: undefined,
       parentId: undefined,
+      isHidden: false,
     });
 
   // Effect to handle initial state and parent selection changes
@@ -111,6 +114,7 @@ export default function NewTrackerPage() {
         isNumber: state.type !== "checkbox",
         ...(state.goal && state.goal > 0 && { goal: state.goal }),
         ...(state.parentId && { parentId: state.parentId }),
+        isHidden: state.isHidden,
       };
 
       await createTracker(trackerData);
@@ -256,6 +260,22 @@ export default function NewTrackerPage() {
               {trackers.find((t) => t.id === state.parentId)?.title}
             </div>
           )}
+        </div>
+
+        <div className="flex items-center gap-3">
+          <Checkbox
+            id="isHidden"
+            checked={state.isHidden}
+            onCheckedChange={(checked) =>
+              updateField("isHidden", checked === true)
+            }
+          />
+          <Label
+            htmlFor="isHidden"
+            className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+          >
+            Hide from home page
+          </Label>
         </div>
       </div>
     </div>

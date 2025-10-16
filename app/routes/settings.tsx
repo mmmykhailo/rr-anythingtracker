@@ -7,6 +7,8 @@ import {
 import { useState } from "react";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
+import { Checkbox } from "~/components/ui/checkbox";
+import { Label } from "~/components/ui/label";
 import {
   Card,
   CardContent,
@@ -19,7 +21,12 @@ import {
   exportAllData,
   importAllDataWithConfirmation,
 } from "~/lib/data-operations";
-import { isSyncConfigured, isEncryptionEnabled } from "~/lib/github-gist-sync";
+import { isSyncConfigured } from "~/lib/github-gist-sync";
+import {
+  getShowHiddenTrackers,
+  setShowHiddenTrackers,
+  getEncryptionEnabled,
+} from "~/lib/user-settings";
 
 export function meta() {
   return [
@@ -36,9 +43,12 @@ export function meta() {
 export default function SettingsPage() {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [showHiddenTrackers, setShowHiddenTrackersState] = useState(
+    getShowHiddenTrackers()
+  );
 
   const syncConfigured = isSyncConfigured();
-  const encryptionEnabled = isEncryptionEnabled();
+  const encryptionEnabled = getEncryptionEnabled();
 
   const handleExport = async () => {
     try {
@@ -80,6 +90,13 @@ export default function SettingsPage() {
   };
 
   const gitHubStatus = getGitHubSyncStatus();
+
+  const handleToggleHiddenTrackers = (checked: boolean) => {
+    setShowHiddenTrackersState(checked);
+    setShowHiddenTrackers(checked);
+    // Trigger a page reload to refresh the tracker list
+    window.dispatchEvent(new Event("storage"));
+  };
 
   return (
     <div>
@@ -182,6 +199,49 @@ export default function SettingsPage() {
                   Dev Utils panel to manually sync.
                 </div>
               )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Hidden Trackers Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              Hidden Trackers
+            </CardTitle>
+            <CardDescription>
+              Control visibility of hidden trackers on the home page
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  id="showHiddenTrackers"
+                  checked={showHiddenTrackers}
+                  onCheckedChange={(checked) =>
+                    handleToggleHiddenTrackers(checked === true)
+                  }
+                />
+                <Label
+                  htmlFor="showHiddenTrackers"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  Show hidden trackers
+                </Label>
+              </div>
+              <div className="text-xs text-muted-foreground mt-2">
+                <p className="mb-2">
+                  Hidden trackers are useful for archiving trackers you no
+                  longer actively use without deleting their data, or for
+                  temporarily hiding trackers when taking screenshots.
+                </p>
+                <p>
+                  You can mark any tracker as hidden from its edit page. Hidden
+                  trackers will not appear on the home page unless this setting
+                  is enabled.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>
