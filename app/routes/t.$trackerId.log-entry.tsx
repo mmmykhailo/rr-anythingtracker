@@ -4,12 +4,7 @@ import type { ClientLoaderFunctionArgs } from "react-router";
 import { formatDateString } from "~/lib/dates";
 import { useTrackerEntries } from "~/lib/hooks";
 import { getTrackerById } from "~/lib/db";
-import {
-  TrackerHeader,
-  EntryInput,
-  TrackerHistory,
-} from "~/components/tracker";
-import type { HistoryEntry } from "~/components/tracker";
+import { TrackerHeader, EntryInput } from "~/components/tracker";
 
 export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   const trackerId = params.trackerId;
@@ -49,24 +44,13 @@ export default function LogEntryPage() {
       ? formatDateString(new Date(location.state.dateString))
       : formatDateString(new Date())
   );
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   const {
     addToCurrentEntry,
     getCurrentEntry,
     setEntry,
-    getHistory,
-    removeEntryById,
     loading: entryLoading,
   } = useTrackerEntries(trackerId || "");
-
-  const loadHistory = async () => {
-    if (trackerId) {
-      const entries = await getHistory(20); // Limit to last 20 entries
-      setHistory(entries);
-    }
-  };
 
   useEffect(() => {
     if (tracker && trackerId) {
@@ -75,7 +59,6 @@ export default function LogEntryPage() {
         setCurrentValue(value);
       };
       loadCurrentValue();
-      loadHistory();
     }
   }, [tracker, getCurrentEntry, selectedDate, trackerId]);
 
@@ -87,7 +70,6 @@ export default function LogEntryPage() {
         comment
       );
       setCurrentValue(newValue);
-      await loadHistory(); // Refresh history after adding
     } catch (error) {
       console.error("Failed to add value:", error);
     }
@@ -97,28 +79,8 @@ export default function LogEntryPage() {
     try {
       await setEntry(checked ? 1 : 0, selectedDate, comment);
       setCurrentValue(checked ? 1 : 0);
-      await loadHistory(); // Refresh history after updating
     } catch (error) {
       console.error("Failed to update checkbox:", error);
-    }
-  };
-
-  const handleDeleteEntry = async (entryId: string) => {
-    if (!confirm("Are you sure you want to delete this entry?")) {
-      return;
-    }
-
-    try {
-      setDeletingEntryId(entryId);
-      await removeEntryById(entryId);
-      await loadHistory(); // Refresh history after deletion
-      // Also refresh current value after deletion
-      const value = await getCurrentEntry(selectedDate);
-      setCurrentValue(value);
-    } catch (error) {
-      console.error("Failed to delete entry:", error);
-    } finally {
-      setDeletingEntryId(null);
     }
   };
 
@@ -144,14 +106,6 @@ export default function LogEntryPage() {
         selectedDate={selectedDate}
         onQuickAdd={handleQuickAdd}
         onCheckboxChange={handleCheckboxChange}
-        entryLoading={entryLoading}
-      />
-
-      <TrackerHistory
-        history={history}
-        tracker={tracker}
-        onDeleteEntry={handleDeleteEntry}
-        deletingEntryId={deletingEntryId}
         entryLoading={entryLoading}
       />
     </div>

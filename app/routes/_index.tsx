@@ -314,7 +314,7 @@ export default function Home() {
                         </div>
                       )}
                       <Link
-                        to={`/${tracker.id}/log-entry`}
+                        to={`/t/${tracker.id}/history`}
                         prefetch="viewport"
                         className="flex-1 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center"
                       >
@@ -369,7 +369,7 @@ export default function Home() {
                                 </span>
                               )}
                             <Link
-                              to={`/${tracker.id}/log-entry`}
+                              to={`/t/${tracker.id}/log-entry`}
                               prefetch="viewport"
                               className="absolute inset-0"
                               state={{ dateString }}
@@ -383,13 +383,13 @@ export default function Home() {
                 </ContextMenuTrigger>
                 <ContextMenuContent className="w-48">
                   <ContextMenuItem asChild>
-                    <Link to={`/${tracker.id}/log-entry`} prefetch="viewport">
+                    <Link to={`/t/${tracker.id}/log-entry`} prefetch="viewport">
                       <BarChart3 className="mr-2 h-4 w-4" />
                       Open Tracker
                     </Link>
                   </ContextMenuItem>
                   <ContextMenuItem asChild>
-                    <Link to={`/${tracker.id}/log-entry`} prefetch="viewport">
+                    <Link to={`/t/${tracker.id}/log-entry`} prefetch="viewport">
                       <Edit className="mr-2 h-4 w-4" />
                       Log Entry
                     </Link>

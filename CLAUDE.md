@@ -124,7 +124,7 @@ app/
 ├── routes/
 │   ├── _index.tsx                # Home page: tracker list with week view
 │   ├── new-tracker.tsx           # Create new tracker form
-│   ├── $trackerId.log-entry.tsx  # Log entry page for a specific tracker
+│   ├── t.$trackerId.log-entry.tsx  # Log entry page for a specific tracker
 │   ├── settings.tsx              # App settings
 │   ├── github-sync-settings.tsx  # GitHub sync configuration
 │   └── onboarding.tsx            # Initial onboarding flow
