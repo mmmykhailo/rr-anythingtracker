@@ -42,38 +42,26 @@ export function TrackerHistory({
     }));
   };
 
-  return (
-    <div className="mt-8">
-      <div className="flex items-center gap-2 mb-4">
-        <Clock className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-        <h2 className="text-lg font-semibold">Recent History</h2>
-        <span className="text-sm text-gray-500">
-          ({history.length} entries)
-        </span>
-      </div>
-
-      {history.length === 0 ? (
-        <div className="text-center py-8">
-          <Clock className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-          <p className="text-gray-600 dark:text-gray-400 text-sm">
-            No entries yet. Start tracking to see your history here.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {groupEntriesByDate(history).map(({ date, entries }) => (
-            <HistoryDateGroup
-              key={date}
-              date={date}
-              entries={entries}
-              tracker={tracker}
-              onDeleteEntry={onDeleteEntry}
-              deletingEntryId={deletingEntryId}
-              entryLoading={entryLoading}
-            />
-          ))}
-        </div>
-      )}
+  return history.length === 0 ? (
+    <div className="text-center py-8">
+      <Clock className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+      <p className="text-gray-600 dark:text-gray-400 text-sm">
+        No entries yet. Start tracking to see your history here.
+      </p>
+    </div>
+  ) : (
+    <div className="space-y-4">
+      {groupEntriesByDate(history).map(({ date, entries }) => (
+        <HistoryDateGroup
+          key={date}
+          date={date}
+          entries={entries}
+          tracker={tracker}
+          onDeleteEntry={onDeleteEntry}
+          deletingEntryId={deletingEntryId}
+          entryLoading={entryLoading}
+        />
+      ))}
     </div>
   );
 }
