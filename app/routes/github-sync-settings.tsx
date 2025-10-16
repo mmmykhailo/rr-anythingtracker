@@ -12,14 +12,19 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import {
-  STORAGE_KEYS,
-  isEncryptionEnabled,
-  setEncryptionEnabled,
-  downloadJsonFromGist,
-} from "~/lib/github-gist-sync";
+import { downloadJsonFromGist } from "~/lib/github-gist-sync";
 import { isCryptoSupported } from "~/lib/crypto";
 import { EncryptionMigrationInfo } from "~/components/EncryptionMigrationInfo";
+import {
+  getGithubToken,
+  setGithubToken,
+  removeGithubToken,
+  getGistId,
+  setGistId,
+  removeGistId,
+  getEncryptionEnabled,
+  setEncryptionEnabled,
+} from "~/lib/user-settings";
 
 export function meta() {
   return [
@@ -36,13 +41,11 @@ export function meta() {
 export default function GitHubSyncSettingsPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [githubToken, setGithubToken] = useState(
-    () => localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN) || ""
+  const [githubToken, setGithubTokenState] = useState(
+    () => getGithubToken() || ""
   );
-  const [gistId, setGistId] = useState(
-    () => localStorage.getItem(STORAGE_KEYS.GIST_ID) || ""
-  );
-  const savedEncryptionEnabled = isEncryptionEnabled(); // The actual saved state
+  const [gistId, setGistIdState] = useState(() => getGistId() || "");
+  const savedEncryptionEnabled = getEncryptionEnabled(); // The actual saved state
   const [encryptionEnabled, setEncryptionEnabledState] = useState(
     () => savedEncryptionEnabled
   );
@@ -54,10 +57,7 @@ export default function GitHubSyncSettingsPage() {
   const [hasExistingGistData, setHasExistingGistData] = useState(false);
 
   const isSyncEnabled = useMemo(() => {
-    return (
-      localStorage.getItem(STORAGE_KEYS.GITHUB_TOKEN) &&
-      localStorage.getItem(STORAGE_KEYS.GIST_ID)
-    );
+    return getGithubToken() && getGistId();
   }, []);
 
   // Check if coming from onboarding
@@ -108,8 +108,8 @@ export default function GitHubSyncSettingsPage() {
     try {
       setIsSaving(true);
 
-      localStorage.setItem(STORAGE_KEYS.GITHUB_TOKEN, githubToken.trim());
-      localStorage.setItem(STORAGE_KEYS.GIST_ID, gistId.trim());
+      setGithubToken(githubToken.trim());
+      setGistId(gistId.trim());
       setEncryptionEnabled(encryptionEnabled);
 
       navigate("/", { replace: true });
@@ -130,9 +130,9 @@ export default function GitHubSyncSettingsPage() {
     }
 
     try {
-      // Clear any existing values and set opted out flag
-      localStorage.removeItem(STORAGE_KEYS.GITHUB_TOKEN);
-      localStorage.removeItem(STORAGE_KEYS.GIST_ID);
+      // Clear any existing values
+      removeGithubToken();
+      removeGistId();
 
       // Navigate back to home
       navigate("/", { replace: true });
@@ -210,7 +210,7 @@ export default function GitHubSyncSettingsPage() {
             id="githubToken"
             placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
             value={githubToken}
-            onChange={(e) => setGithubToken(e.target.value)}
+            onChange={(e) => setGithubTokenState(e.target.value)}
             className={errors.token ? "border-red-500" : ""}
           />
           {errors.token && (
@@ -242,7 +242,7 @@ export default function GitHubSyncSettingsPage() {
             id="gistId"
             placeholder="a1b2c3d4e5f6..."
             value={gistId}
-            onChange={(e) => setGistId(e.target.value)}
+            onChange={(e) => setGistIdState(e.target.value)}
             className={errors.gist ? "border-red-500" : ""}
           />
           {errors.gist && (
