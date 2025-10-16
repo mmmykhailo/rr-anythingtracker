@@ -54,10 +54,10 @@ export default function TrackerPageLayout() {
             label: "Charts",
             url: `/t/${trackerId}/charts`,
           },
-          {
-            label: "Edit",
-            url: `/t/${trackerId}/edit`,
-          },
+          // {
+          //   label: "Edit",
+          //   url: `/t/${trackerId}/edit`,
+          // },
         ]}
       />
       <Outlet />
