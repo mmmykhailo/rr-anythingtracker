@@ -5,13 +5,16 @@ A React Router 7 application for tracking anything you want - water intake, step
 ## Features
 
 - 📊 **Track Anything**: Create custom trackers for any metric (liquids, steps, habits, etc.)
-- 📅 **Week View**: View your progress across the last 7 days with easy navigation
-- 🎯 **Goals**: Set daily goals and visualize your progress
-- ✅ **Multiple Types**: Support for numeric values and simple checkboxes
-- 💾 **Local Storage**: All data stored locally in IndexedDB - no server required
-- 📱 **Mobile-First**: Optimized for mobile devices with a clean, responsive design
-- 📤 **Export/Import**: Backup and restore your data (development mode)
-- ⚡ **Fast**: Lightweight and performant
+- 📅 **Flexible Date View**: View your progress across the last 4 days with easy navigation to past and future periods
+- 🎯 **Goals**: Set daily goals and visualize your progress with color-coded indicators
+- ✅ **Multiple Types**: Support for numeric values (liters, steps, custom) and simple checkboxes
+- 🔗 **Parent-Child Trackers**: Create hierarchical relationships where child trackers automatically aggregate into parents
+- 💾 **Local Storage**: All data stored locally in IndexedDB - no server required, completely private
+- 📱 **PWA Support**: Install as a Progressive Web App on mobile and desktop
+- 🔄 **GitHub Sync**: Optional cloud backup via GitHub Gist with end-to-end encryption
+- 📤 **Export/Import**: Backup and restore your data as JSON files
+- 📜 **Entry History**: View detailed history of all entries with timestamps and comments
+- ⚡ **Fast**: Lightweight and performant with event-driven architecture
 
 ## Getting Started
 
@@ -83,28 +86,45 @@ The parent tracker feature allows you to create hierarchical relationships betwe
 
 ### Viewing Progress
 
-- The home page shows a week view of all your trackers
+- The home page shows the last 4 days of all your trackers
 - Green values indicate you've met your daily goal
 - Gray values indicate you haven't met your goal
-- Use the navigation arrows to view previous/future weeks
-- Click "This Week" to jump back to the current week
+- Use the navigation arrows to view previous/future periods
+- Parent trackers can be expanded/collapsed to show/hide their children
 
 ## Data Management
 
 ### Local Storage
 
 All your data is stored locally in your browser using IndexedDB. This means:
-- ✅ Your data is private and never leaves your device
+- ✅ Your data is private and never leaves your device (unless you enable GitHub Sync)
 - ✅ Works offline
-- ❌ Data is tied to your browser - clearing browser data will delete your trackers
-- ❌ Data won't sync between devices
+- ✅ Complete ownership of your data
+- ⚠️ Data is tied to your browser - clearing browser data will delete your trackers
 
-### Backup & Restore (Development Mode)
+### Export & Import
 
-In development mode, you'll see a "Dev Utils" panel in the bottom-right corner with options to:
+Access via Settings (gear icon):
+- **Export**: Download your data as a JSON file for backup
+- **Import**: Restore data from a JSON file (replaces existing data)
 
-- **Export**: Download your data as a JSON file
-- **Import**: Restore data from a JSON file
+### GitHub Sync (Optional)
+
+Automatically backup and sync your data across devices via GitHub Gist:
+1. Go to Settings → Configure GitHub Sync
+2. Create a GitHub Personal Access Token with `gist` scope
+3. Enter your token and Gist ID (or create a new gist)
+4. Enable encryption (recommended) for end-to-end encrypted backups
+5. Data automatically syncs after changes (2-second debounce)
+
+**Security**: With encryption enabled, your data is encrypted client-side using AES-GCM before upload. Your GitHub token derives the encryption key.
+
+### Development Mode
+
+In development mode, a "Dev Utils" panel appears in the bottom-right corner with options to:
+- **Sync Now**: Manually trigger GitHub sync
+- **Export**: Download data as JSON
+- **Import**: Restore from JSON file
 - **Clear Data**: Delete all trackers and entries
 - **Seed Data**: Add sample data for testing
 
@@ -141,25 +161,38 @@ Simple on/off tracking for habits or activities where you just need to mark comp
 app/
 ├── components/          # Reusable UI components
 │   ├── ui/             # shadcn/ui components
-│   └── dev-utils.tsx   # Development utilities
+│   ├── tracker/        # Tracker-specific components
+│   ├── dev-utils.tsx   # Development utilities panel
+│   ├── SyncButton.tsx  # GitHub sync button
+│   └── SyncProvider.tsx # Sync state context
 ├── lib/                # Core utilities and logic
 │   ├── db.ts          # IndexedDB operations
 │   ├── hooks.ts       # React hooks for data management
 │   ├── dates.ts       # Date utilities
 │   ├── data-export.ts # Export/import functionality
+│   ├── data-operations.ts # High-level data operations
+│   ├── data-change-events.ts # Event system for data changes
+│   ├── github-gist-sync/ # GitHub Gist sync
+│   ├── crypto.ts      # Encryption/decryption
 │   └── trackers.ts    # Tracker type definitions
 └── routes/            # React Router pages
-    ├── _index.tsx     # Home page (tracker list)
-    ├── new-tracker.tsx # Create new tracker
-    └── $trackerId.log-entry.tsx # Log entries
+    ├── _index.tsx     # Home page (tracker list with expand/collapse)
+    ├── new-tracker.tsx # Create new tracker form
+    ├── $trackerId.log-entry.tsx # Log entries with history
+    ├── settings.tsx   # App settings and data management
+    ├── github-sync-settings.tsx # GitHub sync configuration
+    └── onboarding.tsx # Initial onboarding flow
 ```
 
 ### Database Schema
 
-The app uses IndexedDB with two main stores:
+The app uses IndexedDB with three main stores:
 
-1. **trackers**: Stores tracker metadata (name, type, goals)
-2. **entries**: Stores individual data points (value, date, tracker ID)
+1. **trackers**: Stores tracker metadata (name, type, goals, parentId)
+2. **entries**: Stores individual data points (value, date, tracker ID, comment, createdAt)
+3. **metadata**: Stores app-level metadata (lastChangeDate, onboardingCompleted)
+
+Values are stored as integers in base units (e.g., milliliters for liters) for precision.
 
 ## Development
 
@@ -179,11 +212,13 @@ The app uses IndexedDB with two main stores:
 
 ## Browser Compatibility
 
-- Modern browsers with IndexedDB support
-- Chrome 23+
-- Firefox 38+
-- Safari 8+
-- Edge 12+
+- Modern browsers with IndexedDB and Web Crypto API support
+- Chrome 60+
+- Firefox 57+
+- Safari 11+
+- Edge 79+
+
+**Note**: Encryption requires Web Crypto API. Browsers without support can still use the app but without encryption.
 
 ## Contributing
 
@@ -199,8 +234,11 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## Roadmap
 
-- [ ] Data synchronization across devices
-- [ ] More tracker types (time-based, rating scales)
+- [x] Data synchronization across devices (via GitHub Gist)
+- [x] End-to-end encryption for sync
+- [x] PWA support for mobile installation
+- [x] Entry history with comments
+- [ ] More tracker types
 - [ ] Charts and analytics
 - [ ] Reminders and notifications
 - [ ] Themes and customization
