@@ -314,7 +314,7 @@ export default function Home() {
                         </div>
                       )}
                       <Link
-                        to={`/t/${tracker.id}/log-entry`}
+                        to={`/t/${tracker.id}/history`}
                         prefetch="viewport"
                         className="flex-1 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center"
                       >
