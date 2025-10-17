@@ -123,7 +123,9 @@ export function isValidStoredValue(storedValue: number, type: TrackerType): bool
  * @param type - The tracker type
  * @returns The formatted string for input field
  */
-export function formatForInput(storedValue: number, type: TrackerType): string {
+export function formatForInput(storedValue: number | null, type: TrackerType): string {
+  if (storedValue === null) return "";
+
   const displayValue = toDisplayValue(storedValue, type);
   const decimals = displayDecimals[type];
 
