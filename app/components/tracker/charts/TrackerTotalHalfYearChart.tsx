@@ -30,24 +30,21 @@ interface Entry {
   createdAt: Date;
 }
 
-interface TrackerHalfYearChartProps {
+interface TrackerTotalHalfYearChartProps {
   tracker: Tracker;
   entries: Entry[];
 }
 
-export function TrackerHalfYearChart({
+export function TrackerTotalHalfYearChart({
   tracker,
   entries,
-}: TrackerHalfYearChartProps) {
-  // Get the last 6 months
+}: TrackerTotalHalfYearChartProps) {
   const today = new Date();
   const sixMonthsAgo = new Date(today);
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  // Create a map of date -> total value
   const dateValues = new Map<string, number>();
 
-  // Filter entries from last 6 months and aggregate by date
   entries.forEach((entry) => {
     const entryDate = new Date(entry.date);
     if (entryDate >= sixMonthsAgo && entryDate <= today) {
@@ -57,7 +54,6 @@ export function TrackerHalfYearChart({
     }
   });
 
-  // Create array of all dates in the last 6 months
   const monthNames = [
     "January",
     "February",
@@ -73,7 +69,6 @@ export function TrackerHalfYearChart({
     "December",
   ];
 
-  // Group by month and calculate monthly totals
   const monthlyData = new Map<string, number>();
   dateValues.forEach((value, date) => {
     const dateObj = new Date(date);
@@ -84,7 +79,6 @@ export function TrackerHalfYearChart({
     monthlyData.set(monthKey, currentMonthValue + value);
   });
 
-  // Generate chart data for the last 6 months
   const chartData = [];
   for (let i = 5; i >= 0; i--) {
     const date = new Date(today);
@@ -109,7 +103,6 @@ export function TrackerHalfYearChart({
     },
   } satisfies ChartConfig;
 
-  // Calculate trend
   const lastMonthValue = chartData[5]?.value || 0;
   const previousMonthValue = chartData[4]?.value || 0;
   const trend =
@@ -118,7 +111,6 @@ export function TrackerHalfYearChart({
       : 0;
   const isPositiveTrend = trend > 0;
 
-  // Get date range for description
   const startMonth = chartData[0]?.month || "";
   const endMonth = chartData[5]?.month || "";
   const year = today.getFullYear();
@@ -128,7 +120,7 @@ export function TrackerHalfYearChart({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>{tracker.title} - Last 6 months</CardTitle>
+        <CardTitle>Total (last 6 months)</CardTitle>
         <CardDescription>
           {startMonth} - {endMonth} {year}
         </CardDescription>
