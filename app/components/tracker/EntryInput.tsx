@@ -1,4 +1,4 @@
-import { Plus, X } from "lucide-react";
+import { Plus, PlusIcon, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -10,6 +10,7 @@ import {
   parseInputToStored,
   toDisplayValue,
   getInputStep,
+  formatForInput,
 } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
 
@@ -32,19 +33,17 @@ export function EntryInput({
   onCheckboxChange,
   entryLoading,
 }: EntryInputProps) {
-  const [customInputValue, setCustomInputValue] = useState("");
+  const [inputValue, setInputValue] = useState<number | null>(null);
   const [comment, setComment] = useState("");
 
   const handleCustomAdd = async () => {
-    // Parse the input to stored integer value
-    const storedValue = parseInputToStored(customInputValue, tracker.type);
-    if (storedValue === null || storedValue === 0) {
+    if (inputValue === null || inputValue === 0) {
       return;
     }
 
     try {
-      await onQuickAdd(storedValue, comment);
-      setCustomInputValue("");
+      await onQuickAdd(inputValue, comment);
+      setInputValue(null);
       setComment("");
     } catch (error) {
       console.error("Failed to add custom value:", error);
@@ -130,6 +129,35 @@ export function EntryInput({
             </span>
           </div>
 
+          <Input
+            id="value"
+            type="number"
+            step={getInputStep(tracker.type)}
+            value={formatForInput(inputValue, tracker.type)}
+            onChange={(e) =>
+              setInputValue(parseInputToStored(e.target.value, tracker.type))
+            }
+            placeholder="Enter value"
+          />
+
+          {!!quickAddValues && (
+            <div className="flex gap-4 overflow-auto -mb-2 pb-2 -mx-4 w-[calc(100%+2rem)] px-4">
+              {quickAddValues.map(({ label, value }) => (
+                <Button
+                  className="grow"
+                  variant="outline"
+                  key={value}
+                  onClick={async () => {
+                    setInputValue(value);
+                  }}
+                  disabled={entryLoading}
+                >
+                  {label}
+                </Button>
+              ))}
+            </div>
+          )}
+
           <div className="flex gap-4 items-center">
             <Label htmlFor="comment" className="w-20">
               Comment
@@ -144,50 +172,12 @@ export function EntryInput({
             />
           </div>
 
-          {!!quickAddValues && (
-            <div className="flex gap-4 overflow-auto -mb-2 pb-2 -mx-4 w-[calc(100%+2rem)] px-4">
-              {quickAddValues.map(({ label, value }) => (
-                <Button
-                  variant="outline"
-                  key={value}
-                  onClick={async () => {
-                    await onQuickAdd(value, comment);
-                    setComment("");
-                  }}
-                  disabled={entryLoading}
-                >
-                  <Plus /> {label}
-                </Button>
-              ))}
-            </div>
-          )}
-          <div className="flex gap-4 items-center mt-2">
-            Custom
-            <Input
-              className="w-40 shrink"
-              type="number"
-              step={getInputStep(tracker.type)}
-              value={customInputValue}
-              onChange={(e) => setCustomInputValue(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  handleCustomAdd();
-                }
-              }}
-              placeholder={tracker.type === "liters" ? "0.5" : "1"}
-            />
-            <Button
-              variant="secondary"
-              onClick={handleCustomAdd}
-              disabled={
-                entryLoading ||
-                !customInputValue ||
-                parseInputToStored(customInputValue, tracker.type) === null
-              }
-            >
-              <Plus /> Add
-            </Button>
-          </div>
+          <Button
+            onClick={handleCustomAdd}
+            disabled={entryLoading || !inputValue}
+          >
+            <PlusIcon /> Add
+          </Button>
         </>
       ) : null}
     </div>
