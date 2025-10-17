@@ -51,8 +51,8 @@ export default function TrackerPageLayout() {
             url: `/t/${trackerId}/history`,
           },
           {
-            label: "Charts",
-            url: `/t/${trackerId}/charts`,
+            label: "Stats",
+            url: `/t/${trackerId}/stats`,
           },
           {
             label: "Edit",
