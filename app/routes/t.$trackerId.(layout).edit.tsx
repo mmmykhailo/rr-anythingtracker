@@ -1,14 +1,26 @@
 import { useEffect, useState } from "react";
 import { useLoaderData, useRevalidator, useNavigate } from "react-router";
 import type { ClientLoaderFunctionArgs } from "react-router";
-import { ChevronLeft, Save } from "lucide-react";
-import { Link } from "react-router";
-import { getTrackerById } from "~/lib/db";
+import { Save } from "lucide-react";
+import { getTrackerById, getEntryHistory } from "~/lib/db";
 import { useTrackerMutations, useFormState } from "~/lib/hooks";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Checkbox } from "~/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import {
+  type TrackerType,
+  trackerTypes,
+  trackerTypesLabels,
+} from "~/lib/trackers";
 import {
   parseInputToStored,
   toDisplayValue,
@@ -26,7 +38,11 @@ export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
     if (!tracker) {
       throw new Response("Tracker not found", { status: 404 });
     }
-    return { tracker };
+
+    const entries = await getEntryHistory(trackerId);
+    const hasEntries = entries.length > 0;
+
+    return { tracker, hasEntries };
   } catch (error) {
     throw new Response("Failed to load tracker", { status: 500 });
   }
@@ -45,20 +61,25 @@ export function meta({ params }: { params: { trackerId: string } }) {
 
 interface TrackerFormData {
   title: string;
+  type: TrackerType;
   goal?: number;
   isHidden: boolean;
 }
 
 export default function TrackerEditPage() {
-  const { tracker } = useLoaderData<typeof clientLoader>();
+  const { tracker, hasEntries } = useLoaderData<typeof clientLoader>();
   const revalidator = useRevalidator();
   const navigate = useNavigate();
   const { modifyTracker } = useTrackerMutations();
   const [isSaving, setIsSaving] = useState(false);
+  const [isCheckboxTypeSelected, setIsCheckboxTypeSelected] = useState(
+    tracker.type === "checkbox"
+  );
 
   const { state, errors, updateField, setFieldError, clearErrors, setState } =
     useFormState<TrackerFormData>({
       title: tracker.title,
+      type: tracker.type,
       goal: tracker.goal,
       isHidden: tracker.isHidden || false,
     });
@@ -91,6 +112,8 @@ export default function TrackerEditPage() {
       const updatedTracker = {
         ...tracker,
         title: state.title.trim(),
+        type: state.type,
+        isNumber: state.type !== "checkbox",
         goal: state.goal && state.goal > 0 ? state.goal : undefined,
         isHidden: state.isHidden,
       };
@@ -112,7 +135,7 @@ export default function TrackerEditPage() {
     );
   }
 
-  const isCheckboxType = tracker.type === "checkbox";
+  const canChangeType = !hasEntries && !tracker.parentId;
 
   return (
     <div>
@@ -132,19 +155,65 @@ export default function TrackerEditPage() {
           )}
         </div>
 
-        {!isCheckboxType && (
+        <div className="grid items-center gap-3">
+          <Label htmlFor="trackerTypeTrigger">Measurement unit (type)</Label>
+          <Select
+            required
+            value={state.type}
+            onValueChange={(value: TrackerType) => {
+              updateField("type", value);
+              setIsCheckboxTypeSelected(value === "checkbox");
+              // Clear goal when switching to checkbox type
+              if (value === "checkbox") {
+                updateField("goal", undefined);
+              }
+            }}
+            disabled={!canChangeType}
+          >
+            <SelectTrigger
+              id="trackerTypeTrigger"
+              className={!canChangeType ? "opacity-60" : ""}
+            >
+              <SelectValue placeholder="Select measurement unit" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                {trackerTypes.map((trackerType) => (
+                  <SelectItem key={trackerType} value={trackerType}>
+                    {trackerTypesLabels[trackerType]}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          {!canChangeType && hasEntries && (
+            <div className="text-muted-foreground text-sm">
+              Cannot change type because this tracker has existing entries
+            </div>
+          )}
+          {!canChangeType && tracker.parentId && (
+            <div className="text-blue-600 text-sm">
+              Cannot change type because this tracker has a parent tracker
+            </div>
+          )}
+          {errors.type && (
+            <div className="text-red-600 text-sm">{errors.type}</div>
+          )}
+        </div>
+
+        {!isCheckboxTypeSelected && (
           <div className="grid items-center gap-3">
             <Label htmlFor="trackerDailyGoal">Daily goal (optional)</Label>
             <Input
               type="number"
               id="trackerDailyGoal"
-              placeholder={tracker.type === "liters" ? "1" : "100"}
-              step={getInputStep(tracker.type)}
-              value={state.goal ? toDisplayValue(state.goal, tracker.type) : ""}
+              placeholder={state.type === "liters" ? "1" : "100"}
+              step={getInputStep(state.type)}
+              value={state.goal ? toDisplayValue(state.goal, state.type) : ""}
               onChange={(e) => {
                 const value = e.target.value;
                 if (value) {
-                  const storedValue = parseInputToStored(value, tracker.type);
+                  const storedValue = parseInputToStored(value, state.type);
                   updateField(
                     "goal",
                     storedValue !== null ? storedValue : undefined
@@ -173,17 +242,14 @@ export default function TrackerEditPage() {
           </Label>
         </div>
 
-        <div className="text-sm text-muted-foreground">
-          <p>
-            <strong>Type:</strong> {tracker.type}
-          </p>
-          {tracker.parentId && (
-            <p className="mt-1">
+        {tracker.parentId && (
+          <div className="text-sm text-muted-foreground">
+            <p>
               <strong>Note:</strong> This tracker has a parent tracker. Values
               added here will automatically be added to the parent.
             </p>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <Button onClick={handleSave} disabled={isSaving}>
