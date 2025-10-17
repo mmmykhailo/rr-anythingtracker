@@ -136,13 +136,17 @@ export default function Home() {
   };
 
   // Check if the top-level parent of a tracker is expanded
-  const areAllAncestorsExpanded = (tracker: (typeof visibleTrackers)[0]): boolean => {
+  const areAllAncestorsExpanded = (
+    tracker: (typeof visibleTrackers)[0]
+  ): boolean => {
     if (!tracker.parentId) return true; // Top-level trackers are always visible
 
     // Find the top-level parent by traversing up the hierarchy
     let currentTracker = tracker;
     while (currentTracker.parentId) {
-      const parent = visibleTrackers.find((t) => t.id === currentTracker.parentId);
+      const parent = visibleTrackers.find(
+        (t) => t.id === currentTracker.parentId
+      );
       if (!parent) return false; // Orphaned child
       currentTracker = parent;
     }
@@ -310,7 +314,7 @@ export default function Home() {
               <ContextMenu>
                 <ContextMenuTrigger asChild>
                   <div className="relative flex items-stretch cursor-context-menu">
-                    <div className="w-1/3 flex items-stretch">
+                    <div className="w-1/3 flex items-stretch min-h-[52px]">
                       {!tracker.parentId && hasChildren(tracker.id) && (
                         <div className="w-8 flex-shrink-0">
                           <button
