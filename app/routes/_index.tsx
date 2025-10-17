@@ -341,10 +341,10 @@ export default function Home() {
                       <Link
                         to={`/t/${tracker.id}/history`}
                         prefetch="viewport"
-                        className="flex-1 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center"
+                        className="flex-1 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center max-w-full"
                       >
                         <span
-                          className={clsx("block text-xs", {
+                          className={clsx("text-xs line-clamp-2 break-words", {
                             "ml-8": tracker.parentId,
                           })}
                         >
