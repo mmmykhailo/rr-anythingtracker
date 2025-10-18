@@ -1,5 +1,6 @@
 import { type DBSchema, type IDBPDatabase, openDB } from "idb";
 import type { Tracker } from "./trackers";
+import { extractHashtagsWithOriginalCasing } from "./tags";
 
 // Database schema definition
 interface AnythingTrackerDB extends DBSchema {
@@ -24,6 +25,21 @@ interface AnythingTrackerDB extends DBSchema {
       "by-tracker-date": [string, string];
     };
   };
+  entry_tags: {
+    key: string;
+    value: {
+      id: string;
+      entryId: string;
+      trackerId: string;
+      tagName: string;
+      tagNameWithOriginalCasing: string;
+    };
+    indexes: {
+      "by-entry": string;
+      "by-tracker": string;
+      "by-tracker-tag": [string, string];
+    };
+  };
   metadata: {
     key: string;
     value: {
@@ -34,7 +50,7 @@ interface AnythingTrackerDB extends DBSchema {
 }
 
 const DB_NAME = "AnythingTrackerDB";
-const DB_VERSION = 3;
+const DB_VERSION = 5;
 
 let dbInstance: IDBPDatabase<AnythingTrackerDB> | null = null;
 
@@ -69,6 +85,16 @@ export async function initDB(): Promise<IDBPDatabase<AnythingTrackerDB>> {
         db.createObjectStore("metadata", {
           keyPath: "key",
         });
+      }
+
+      // Create entry_tags store
+      if (!db.objectStoreNames.contains("entry_tags")) {
+        const entryTagsStore = db.createObjectStore("entry_tags", {
+          keyPath: "id",
+        });
+        entryTagsStore.createIndex("by-entry", "entryId");
+        entryTagsStore.createIndex("by-tracker", "trackerId");
+        entryTagsStore.createIndex("by-tracker-tag", ["trackerId", "tagName"]);
       }
     },
     blocked(currentVersion, blockedVersion, event) {
@@ -228,7 +254,7 @@ export async function getTrackerById(id: string): Promise<Tracker | null> {
 
 export async function deleteTracker(id: string): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(["trackers", "entries"], "readwrite");
+  const tx = db.transaction(["trackers", "entries", "entry_tags"], "readwrite");
 
   // Delete tracker
   await tx.objectStore("trackers").delete(id);
@@ -240,6 +266,14 @@ export async function deleteTracker(id: string): Promise<void> {
     .getAllKeys(id);
   for (const entryKey of entries) {
     await tx.objectStore("entries").delete(entryKey);
+  }
+
+  const tags = await tx
+    .objectStore("entry_tags")
+    .index("by-tracker")
+    .getAllKeys(id);
+  for (const tagKey of tags) {
+    await tx.objectStore("entry_tags").delete(tagKey);
   }
 
   await tx.done;
@@ -282,6 +316,7 @@ export async function saveEntry(
 
   for (const entry of existingEntries) {
     await db.delete("entries", entry.id);
+    await deleteEntryTags(entry.id);
     if (!skipDateUpdate) {
       await setLastChangeDate();
     }
@@ -289,8 +324,9 @@ export async function saveEntry(
 
   // Create new entry with the specified value (if > 0)
   if (value > 0) {
+    const entryId = generateId();
     const entry = {
-      id: generateId(),
+      id: entryId,
       trackerId,
       date,
       value,
@@ -298,6 +334,7 @@ export async function saveEntry(
       createdAt: new Date(),
     };
     await db.put("entries", entry);
+    await saveEntryTags(entryId, trackerId, comment);
     if (!skipDateUpdate) {
       await setLastChangeDate();
     }
@@ -383,6 +420,7 @@ export async function deleteEntry(
 
   for (const entry of entries) {
     await db.delete("entries", entry.id);
+    await deleteEntryTags(entry.id);
   }
 }
 
@@ -422,8 +460,9 @@ export async function createEntry(
 ): Promise<void> {
   const db = await getDB();
 
+  const entryId = generateId();
   const entry = {
-    id: generateId(),
+    id: entryId,
     trackerId,
     date,
     value,
@@ -432,6 +471,7 @@ export async function createEntry(
   };
 
   await db.put("entries", entry);
+  await saveEntryTags(entryId, trackerId, comment);
   if (!skipDateUpdate) {
     await setLastChangeDate();
   }
@@ -476,16 +516,18 @@ export async function createEntryWithId(
 export async function deleteEntryById(entryId: string): Promise<void> {
   const db = await getDB();
   await db.delete("entries", entryId);
+  await deleteEntryTags(entryId);
   await setLastChangeDate();
 }
 
 // Utility to clear all data (useful for development/testing)
 export async function clearAllData(): Promise<void> {
   const db = await getDB();
-  const tx = db.transaction(["trackers", "entries"], "readwrite");
+  const tx = db.transaction(["trackers", "entries", "entry_tags"], "readwrite");
 
   await tx.objectStore("trackers").clear();
   await tx.objectStore("entries").clear();
+  await tx.objectStore("entry_tags").clear();
 
   await tx.done;
   await setLastChangeDate();
@@ -575,4 +617,91 @@ export async function seedInitialData(): Promise<void> {
     await saveEntry(coffeeTracker.id, formatDate(yesterday), 60, false); // 60ml from espresso
     await saveEntry(coffeeTracker.id, formatDate(today), 30, false); // 30ml from espresso
   }
+}
+
+export async function saveEntryTags(
+  entryId: string,
+  trackerId: string,
+  comment?: string
+): Promise<void> {
+  if (!comment) return;
+
+  const db = await getDB();
+  const tags = extractHashtagsWithOriginalCasing(comment);
+
+  const existingTags = await db.getAllFromIndex(
+    "entry_tags",
+    "by-entry",
+    entryId
+  );
+  for (const tag of existingTags) {
+    await db.delete("entry_tags", tag.id);
+  }
+
+  const allTrackerTags = await db.getAllFromIndex(
+    "entry_tags",
+    "by-tracker",
+    trackerId
+  );
+
+  for (const { lowercase, original } of tags) {
+    const existingTag = allTrackerTags.find(
+      (t) => t.tagName === lowercase
+    );
+
+    await db.put("entry_tags", {
+      id: generateId(),
+      entryId,
+      trackerId,
+      tagName: lowercase,
+      tagNameWithOriginalCasing: existingTag
+        ? existingTag.tagNameWithOriginalCasing
+        : original,
+    });
+  }
+}
+
+export async function deleteEntryTags(entryId: string): Promise<void> {
+  const db = await getDB();
+  const tags = await db.getAllFromIndex("entry_tags", "by-entry", entryId);
+
+  for (const tag of tags) {
+    await db.delete("entry_tags", tag.id);
+  }
+}
+
+export async function getMostUsedTags(
+  trackerId: string,
+  limit: number = 5
+): Promise<string[]> {
+  const db = await getDB();
+  const allTags = await db.getAllFromIndex(
+    "entry_tags",
+    "by-tracker",
+    trackerId
+  );
+
+  const tagCounts = new Map<string, { count: number; displayName: string }>();
+  for (const tag of allTags) {
+    const existing = tagCounts.get(tag.tagName);
+    if (existing) {
+      existing.count++;
+    } else {
+      tagCounts.set(tag.tagName, {
+        count: 1,
+        displayName: tag.tagNameWithOriginalCasing || tag.tagName,
+      });
+    }
+  }
+
+  return Array.from(tagCounts.values())
+    .sort((a, b) => b.count - a.count)
+    .slice(0, limit)
+    .map((item) => item.displayName);
+}
+
+export async function getEntryTags(entryId: string): Promise<string[]> {
+  const db = await getDB();
+  const tags = await db.getAllFromIndex("entry_tags", "by-entry", entryId);
+  return tags.map((tag) => tag.tagName);
 }

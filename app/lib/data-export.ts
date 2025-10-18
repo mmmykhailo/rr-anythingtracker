@@ -6,6 +6,7 @@ import {
   createEntryWithId,
   getLastChangeDate,
   setLastChangeDate,
+  getDB,
 } from "./db";
 
 export interface ExportData {
@@ -27,12 +28,23 @@ export interface ExportData {
       createdAt: string;
     }>;
   }>;
+  tags: Array<{
+    id: string;
+    entryId: string;
+    trackerId: string;
+    tagName: string;
+    tagNameWithOriginalCasing?: string;
+  }>;
 }
 
 // Export all data to JSON
 export async function exportData(): Promise<ExportData> {
   const trackers = await getAllTrackers();
   const lastChangeDate = await getLastChangeDate();
+  const db = await getDB();
+
+  // Get all tags
+  const allTags = await db.getAll("entry_tags");
 
   const exportData: ExportData = {
     version: "1.0.0",
@@ -58,6 +70,13 @@ export async function exportData(): Promise<ExportData> {
         };
       })
     ),
+    tags: allTags.map((tag) => ({
+      id: tag.id,
+      entryId: tag.entryId,
+      trackerId: tag.trackerId,
+      tagName: tag.tagName,
+      tagNameWithOriginalCasing: tag.tagNameWithOriginalCasing,
+    })),
   };
 
   return exportData;
@@ -99,6 +118,20 @@ export async function importData(
         true,
         entry.comment
       );
+    }
+  }
+
+  // Import tags (if present in export data)
+  if (exportData.tags) {
+    const db = await getDB();
+    for (const tag of exportData.tags) {
+      await db.put("entry_tags", {
+        id: tag.id,
+        entryId: tag.entryId,
+        trackerId: tag.trackerId,
+        tagName: tag.tagName,
+        tagNameWithOriginalCasing: tag.tagNameWithOriginalCasing || tag.tagName,
+      });
     }
   }
 }
@@ -181,6 +214,17 @@ export function validateExportData(data: any): data is ExportData {
             typeof entry.createdAt === "string" &&
             (entry.comment === undefined || typeof entry.comment === "string")
         )
-    )
+    ) &&
+    (data.tags === undefined ||
+      (Array.isArray(data.tags) &&
+        data.tags.every(
+          (tag: any) =>
+            typeof tag.id === "string" &&
+            typeof tag.entryId === "string" &&
+            typeof tag.trackerId === "string" &&
+            typeof tag.tagName === "string" &&
+            (tag.tagNameWithOriginalCasing === undefined ||
+              typeof tag.tagNameWithOriginalCasing === "string")
+        )))
   );
 }

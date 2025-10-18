@@ -1,4 +1,4 @@
-import { Plus, PlusIcon, X } from "lucide-react";
+import { Plus, PlusIcon, X, Hash } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -16,49 +16,59 @@ import {
 import { cn } from "~/lib/utils";
 
 import type { Tracker } from "~/lib/trackers";
+import { useRevalidator } from "react-router";
 
 type EntryInputProps = {
   tracker: Tracker;
-  currentValue: number; // This is the stored integer value
+  currentValue: number;
   selectedDate: string;
-  onQuickAdd: (value: number, comment?: string) => Promise<void>;
+  onSubmit: (value: number, comment?: string) => Promise<void>;
   onCheckboxChange: (checked: boolean, comment?: string) => Promise<void>;
   entryLoading: boolean;
+  mostUsedTags: string[];
 };
 
 export function EntryInput({
   tracker,
   currentValue,
   selectedDate,
-  onQuickAdd,
+  onSubmit,
   onCheckboxChange,
   entryLoading,
+  mostUsedTags,
 }: EntryInputProps) {
   const [inputValue, setInputValue] = useState<number | null>(null);
   const [comment, setComment] = useState("");
+  const { revalidate } = useRevalidator();
 
-  const handleCustomAdd = async () => {
+  const handleSubmit = async () => {
     if (inputValue === null || inputValue === 0) {
       return;
     }
 
     try {
-      await onQuickAdd(inputValue, comment);
+      await onSubmit(inputValue, comment);
       setInputValue(null);
       setComment("");
+      revalidate();
     } catch (error) {
       console.error("Failed to add custom value:", error);
     }
   };
 
+  const handleTagClick = (tagName: string) => {
+    const tag = `#${tagName}`;
+    setComment((prev) => {
+      if (prev) {
+        const trimmedPrev = prev.replace(/ (?=[^ ]*$)/, "");
+        return `${trimmedPrev} ${tag}`;
+      }
+      return tag;
+    });
+  };
+
   const quickAddValues = quickAddValuesMap[tracker.type];
   const isToday = selectedDate === formatDateString(new Date());
-
-  // Convert stored value to display value for showing to user
-  const displayValue = toDisplayValue(currentValue, tracker.type);
-  const displayGoal = tracker.goal
-    ? toDisplayValue(tracker.goal, tracker.type)
-    : null;
 
   return (
     <div className="flex flex-col py-6 gap-4">
@@ -101,6 +111,22 @@ export function EntryInput({
                   placeholder="Add a note (optional)"
                 />
               </div>
+              {mostUsedTags.length > 0 && (
+                <div className="flex gap-2 flex-wrap -mt-2">
+                  {mostUsedTags.map((tag) => (
+                    <Button
+                      key={tag}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTagClick(tag)}
+                      className="h-7 text-xs"
+                    >
+                      <Hash className="w-3 h-3" />
+                      {tag}
+                    </Button>
+                  ))}
+                </div>
+              )}
               <Button
                 variant="outline"
                 onClick={async () => {
@@ -125,8 +151,8 @@ export function EntryInput({
               })}
             >
               {formatStoredValue(currentValue, tracker.type)}
-              {displayGoal !== null &&
-                ` / ${formatStoredValue(tracker.goal!, tracker.type)}`}
+              {!!tracker.goal &&
+                ` / ${formatStoredValue(tracker.goal, tracker.type)}`}
               {displayUnits[tracker.type]}
             </span>
           </div>
@@ -174,10 +200,24 @@ export function EntryInput({
             />
           </div>
 
-          <Button
-            onClick={handleCustomAdd}
-            disabled={entryLoading || !inputValue}
-          >
+          {mostUsedTags.length > 0 && (
+            <div className="flex gap-2 flex-wrap -mt-2">
+              {mostUsedTags.map((tag) => (
+                <Button
+                  key={tag}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleTagClick(tag)}
+                  className="h-7 text-xs"
+                >
+                  <Hash className="w-3 h-3" />
+                  {tag}
+                </Button>
+              ))}
+            </div>
+          )}
+
+          <Button onClick={handleSubmit} disabled={entryLoading || !inputValue}>
             <PlusIcon /> Add
           </Button>
         </>

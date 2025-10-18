@@ -24,7 +24,7 @@ import type { Tracker } from "~/lib/trackers";
 
 const DAYS_TO_SHOW = 4;
 
-export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
+export async function clientLoader() {
   try {
     const trackers = await getAllTrackers();
     return { trackers };
@@ -338,9 +338,7 @@ export default function Home() {
                           </span>
                         ) : (
                           <>
-                            {!!value && (
-                              <Check size={24} className="mx-auto" />
-                            )}
+                            {!!value && <Check size={24} className="mx-auto" />}
                           </>
                         )}
 
