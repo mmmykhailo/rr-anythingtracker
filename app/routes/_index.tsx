@@ -9,7 +9,6 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLoaderData, useNavigate } from "react-router";
-import type { ClientLoaderFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { formatDateForDisplay, getDaysArray, isDateToday } from "~/lib/dates";
@@ -27,7 +26,14 @@ const DAYS_TO_SHOW = 4;
 export async function clientLoader() {
   try {
     const trackers = await getAllTrackers();
-    return { trackers };
+    let savedExpandedTrackers: string[] = [];
+    try {
+      const stored = localStorage.getItem("expandedTrackers");
+      savedExpandedTrackers = stored ? JSON.parse(stored) : [];
+    } catch {
+      savedExpandedTrackers = [];
+    }
+    return { trackers, savedExpandedTrackers };
   } catch (error) {
     throw new Response("Failed to load trackers", { status: 500 });
   }
@@ -46,24 +52,17 @@ export function meta() {
 }
 
 export default function Home() {
-  const { trackers } = useLoaderData<typeof clientLoader>();
+  const { trackers, savedExpandedTrackers } =
+    useLoaderData<typeof clientLoader>();
   const navigate = useNavigate();
   const { isInitialized, error: dbError } = useDatabase();
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
   const [showHiddenTrackers, setShowHiddenTrackers] = useState(() =>
     getShowHiddenTrackers()
   );
-  const [expandedTrackers, setExpandedTrackers] = useState<Set<string>>(() => {
-    // Load expanded trackers from localStorage
-    try {
-      const stored = localStorage.getItem("expandedTrackers");
-      return stored ? new Set(JSON.parse(stored)) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
-
-  // Listen for storage events to update showHiddenTrackers when changed in settings
+  const [expandedTrackers, setExpandedTrackers] = useState<Set<string>>(
+    () => new Set(savedExpandedTrackers)
+  );
   useEffect(() => {
     const handleStorageChange = () => {
       setShowHiddenTrackers(getShowHiddenTrackers());
@@ -74,25 +73,20 @@ export default function Home() {
       window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
-
-  // Filter trackers based on hidden status
   const visibleTrackers = showHiddenTrackers
     ? trackers
     : trackers.filter((t) => !t.isHidden);
 
-  // Sort trackers so children appear immediately under their parents
   const sortedTrackers = (() => {
     const resultTrackers: Array<Tracker> = [];
     const includedIds = new Set();
 
-    // Recursive function to add a tracker and all its descendants
     const addTrackerWithDescendants = (tracker: Tracker) => {
       if (includedIds.has(tracker.id)) return;
 
       resultTrackers.push(tracker);
       includedIds.add(tracker.id);
 
-      // Find and add all direct children recursively
       const children = visibleTrackers.filter(
         (child) => child.parentId === tracker.id
       );
@@ -101,13 +95,11 @@ export default function Home() {
       }
     };
 
-    // Start with parent trackers (those with no parentId)
     const parentTrackers = visibleTrackers.filter((t) => !t.parentId);
     for (const parent of parentTrackers) {
       addTrackerWithDescendants(parent);
     }
 
-    // Add any orphaned children (whose parents don't exist) at the end
     const orphans = visibleTrackers.filter(
       (t) => !includedIds.has(t.id) && t.parentId
     );
@@ -118,32 +110,27 @@ export default function Home() {
     return resultTrackers;
   })();
 
-  // Check if a tracker has children (considering visibility)
   const hasChildren = (trackerId: string) => {
     return visibleTrackers.some((t) => t.parentId === trackerId);
   };
 
-  // Check if the top-level parent of a tracker is expanded
   const areAllAncestorsExpanded = (
     tracker: (typeof visibleTrackers)[0]
   ): boolean => {
-    if (!tracker.parentId) return true; // Top-level trackers are always visible
+    if (!tracker.parentId) return true;
 
-    // Find the top-level parent by traversing up the hierarchy
     let currentTracker = tracker;
     while (currentTracker.parentId) {
       const parent = visibleTrackers.find(
         (t) => t.id === currentTracker.parentId
       );
-      if (!parent) return false; // Orphaned child
+      if (!parent) return false;
       currentTracker = parent;
     }
 
-    // Check if the top-level parent is expanded
     return expandedTrackers.has(currentTracker.id);
   };
 
-  // Toggle expanded state for a parent tracker
   const toggleExpanded = (trackerId: string) => {
     setExpandedTrackers((prev) => {
       const newSet = new Set(prev);
@@ -152,7 +139,6 @@ export default function Home() {
       } else {
         newSet.add(trackerId);
       }
-      // Save to localStorage
       localStorage.setItem(
         "expandedTrackers",
         JSON.stringify(Array.from(newSet))
@@ -160,8 +146,6 @@ export default function Home() {
       return newSet;
     });
   };
-
-  // Check if onboarding is completed
   useEffect(() => {
     if (isInitialized && !isOnboardingCompleted()) {
       navigate("/onboarding", { replace: true });
