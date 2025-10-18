@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLoaderData, useRevalidator } from "react-router";
-import type { ClientLoaderFunctionArgs } from "react-router";
+import { useLoaderData, useRevalidator, useSubmit, useNavigation } from "react-router";
+import type { ClientLoaderFunctionArgs, ClientActionFunctionArgs } from "react-router";
 import { getTrackerById, getEntryHistory, deleteEntryById } from "~/lib/db";
 import { TrackerHistory } from "~/components/tracker";
 import { debouncedDataChange } from "~/lib/data-change-events";
@@ -23,6 +23,29 @@ export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   }
 }
 
+export async function clientAction({ params, request }: ClientActionFunctionArgs) {
+  const trackerId = params.trackerId;
+  if (!trackerId) {
+    throw new Response("Tracker ID is required", { status: 400 });
+  }
+
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+  const entryId = formData.get("entryId") as string;
+
+  try {
+    if (intent === "deleteEntry" && entryId) {
+      await deleteEntryById(entryId);
+      debouncedDataChange.dispatch("entry_deleted", { trackerId });
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete entry:", error);
+    return { success: false, error: "Failed to delete entry" };
+  }
+}
+
 export function meta({ params }: { params: { trackerId: string } }) {
   return [
     { title: "History - AnythingTracker" },
@@ -37,6 +60,8 @@ export function meta({ params }: { params: { trackerId: string } }) {
 export default function TrackerHistoryPage() {
   const { tracker, history } = useLoaderData<typeof clientLoader>();
   const revalidator = useRevalidator();
+  const submit = useSubmit();
+  const navigation = useNavigation();
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -58,19 +83,21 @@ export default function TrackerHistoryPage() {
       return;
     }
 
-    try {
-      setDeletingEntryId(entryId);
-      await deleteEntryById(entryId);
-      debouncedDataChange.dispatch("entry_deleted", {
-        trackerId: tracker.id,
-      });
-      revalidator.revalidate();
-    } catch (error) {
-      console.error("Failed to delete entry:", error);
-    } finally {
+    setDeletingEntryId(entryId);
+
+    const formData = new FormData();
+    formData.append("intent", "deleteEntry");
+    formData.append("entryId", entryId);
+
+    submit(formData, { method: "post" });
+  };
+
+  // Clear deletingEntryId when navigation is complete
+  useEffect(() => {
+    if (navigation.state === "idle") {
       setDeletingEntryId(null);
     }
-  };
+  }, [navigation.state]);
 
   if (!tracker) {
     return (
@@ -86,7 +113,7 @@ export default function TrackerHistoryPage() {
       tracker={tracker}
       onDeleteEntry={handleDeleteEntry}
       deletingEntryId={deletingEntryId}
-      entryLoading={revalidator.state === "loading"}
+      entryLoading={navigation.state !== "idle"}
     />
   );
 }
