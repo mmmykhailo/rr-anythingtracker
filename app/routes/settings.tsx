@@ -4,8 +4,8 @@ import {
   Upload,
   Settings as SettingsIcon,
 } from "lucide-react";
-import { useState } from "react";
-import { Link, useNavigation, useSubmit } from "react-router";
+import { useRef, useState, useEffect } from "react";
+import { Link, useNavigation, useSubmit, useActionData } from "react-router";
 import type { ClientActionFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -18,10 +18,9 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import {
-  exportAllData,
-  importAllDataWithConfirmation,
-} from "~/lib/data-operations";
+import { exportAllData } from "~/lib/data-operations";
+import { importData, validateExportData } from "~/lib/data-export";
+import { debouncedDataChange } from "~/lib/data-change-events";
 import { isSyncConfigured } from "~/lib/github-gist-sync";
 import {
   getShowHiddenTrackers,
@@ -40,15 +39,32 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
     }
 
     if (intent === "import") {
-      const result = await importAllDataWithConfirmation();
-      if (result) {
-        return {
-          success: result.success,
-          message: result.message,
-          shouldReload: result.success
-        };
+      const file = formData.get("file");
+      if (!file || !(file instanceof File)) {
+        return { success: false, message: "No file selected" };
       }
-      return { success: false, message: "Import cancelled" };
+
+      const text = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsText(file);
+      });
+
+      const data = JSON.parse(text);
+
+      if (!validateExportData(data)) {
+        return { success: false, message: "Invalid data format" };
+      }
+
+      await importData(data, true);
+      debouncedDataChange.dispatch("data_imported");
+
+      return {
+        success: true,
+        message: "Data imported successfully",
+        shouldReload: true,
+      };
     }
 
     if (intent === "toggleHiddenTrackers") {
@@ -61,7 +77,10 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
     return { success: false, message: "Unknown intent" };
   } catch (error) {
     console.error("Settings action error:", error);
-    return { success: false, message: "An error occurred" };
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "An error occurred",
+    };
   }
 }
 
@@ -80,6 +99,8 @@ export function meta() {
 export default function SettingsPage() {
   const navigation = useNavigation();
   const submit = useSubmit();
+  const actionData = useActionData<typeof clientAction>();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [showHiddenTrackers, setShowHiddenTrackersState] = useState(
     getShowHiddenTrackers()
   );
@@ -87,8 +108,19 @@ export default function SettingsPage() {
   const syncConfigured = isSyncConfigured();
   const encryptionEnabled = getEncryptionEnabled();
 
-  const isExporting = navigation.state === "submitting" && navigation.formData?.get("intent") === "export";
-  const isImporting = navigation.state === "submitting" && navigation.formData?.get("intent") === "import";
+  const isExporting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "export";
+  const isImporting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "import";
+
+  // Reload page after successful import
+  useEffect(() => {
+    if (actionData && "shouldReload" in actionData && actionData.shouldReload) {
+      window.location.reload();
+    }
+  }, [actionData]);
 
   const handleExport = async () => {
     const formData = new FormData();
@@ -96,10 +128,27 @@ export default function SettingsPage() {
     submit(formData, { method: "post" });
   };
 
-  const handleImport = async () => {
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm("Import data? This will replace all existing data.")) {
+      // Reset the input so the same file can be selected again
+      event.target.value = "";
+      return;
+    }
+
     const formData = new FormData();
     formData.append("intent", "import");
+    formData.append("file", file);
     submit(formData, { method: "post" });
+
+    // Reset the input
+    event.target.value = "";
   };
 
   const getGitHubSyncStatus = () => {
@@ -158,9 +207,16 @@ export default function SettingsPage() {
                 <Download className="h-4 w-4 mr-2" />
                 {isExporting ? "Downloading..." : "Download my data"}
               </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleFileChange}
+                className="hidden"
+              />
               <Button
                 variant="outline"
-                onClick={handleImport}
+                onClick={handleImportClick}
                 disabled={isImporting}
                 className="w-full justify-start"
               >
