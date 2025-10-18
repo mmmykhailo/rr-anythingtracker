@@ -16,6 +16,7 @@ import {
 import { cn } from "~/lib/utils";
 
 import type { Tracker } from "~/lib/trackers";
+import { useRevalidator } from "react-router";
 
 type EntryInputProps = {
   tracker: Tracker;
@@ -38,8 +39,9 @@ export function EntryInput({
 }: EntryInputProps) {
   const [inputValue, setInputValue] = useState<number | null>(null);
   const [comment, setComment] = useState("");
+  const { revalidate } = useRevalidator();
 
-  const handleCustomAdd = async () => {
+  const handleSubmit = async () => {
     if (inputValue === null || inputValue === 0) {
       return;
     }
@@ -48,6 +50,7 @@ export function EntryInput({
       await onSubmit(inputValue, comment);
       setInputValue(null);
       setComment("");
+      revalidate();
     } catch (error) {
       console.error("Failed to add custom value:", error);
     }
@@ -66,12 +69,6 @@ export function EntryInput({
 
   const quickAddValues = quickAddValuesMap[tracker.type];
   const isToday = selectedDate === formatDateString(new Date());
-
-  // Convert stored value to display value for showing to user
-  const displayValue = toDisplayValue(currentValue, tracker.type);
-  const displayGoal = tracker.goal
-    ? toDisplayValue(tracker.goal, tracker.type)
-    : null;
 
   return (
     <div className="flex flex-col py-6 gap-4">
@@ -154,8 +151,8 @@ export function EntryInput({
               })}
             >
               {formatStoredValue(currentValue, tracker.type)}
-              {displayGoal !== null &&
-                ` / ${formatStoredValue(tracker.goal!, tracker.type)}`}
+              {!!tracker.goal &&
+                ` / ${formatStoredValue(tracker.goal, tracker.type)}`}
               {displayUnits[tracker.type]}
             </span>
           </div>
@@ -220,10 +217,7 @@ export function EntryInput({
             </div>
           )}
 
-          <Button
-            onClick={handleCustomAdd}
-            disabled={entryLoading || !inputValue}
-          >
+          <Button onClick={handleSubmit} disabled={entryLoading || !inputValue}>
             <PlusIcon /> Add
           </Button>
         </>
