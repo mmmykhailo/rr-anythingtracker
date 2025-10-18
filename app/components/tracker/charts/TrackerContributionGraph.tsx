@@ -6,7 +6,7 @@ import {
 } from "~/components/ui/tooltip";
 import { Button } from "~/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { cn } from "~/lib/utils";
 import { formatStoredValue } from "~/lib/number-conversions";
 import { ScrollArea, ScrollBar } from "~/components/ui/scroll-area";
@@ -183,6 +183,28 @@ export function TrackerContributionGraph({
     },
     [tracker.type]
   );
+
+  useEffect(() => {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+
+    if (selectedYear === currentYear) {
+      requestAnimationFrame(() => {
+        const todayKey = formatDate(today, "yyyyMMdd");
+        const todayElement = document.querySelector(
+          `[data-date="${todayKey}"]`
+        ) as HTMLElement;
+
+        if (todayElement) {
+          todayElement.scrollIntoView({
+            behavior: "smooth",
+            inline: "center",
+            block: "nearest",
+          });
+        }
+      });
+    }
+  }, [selectedYear]);
 
   return (
     <Card className={className}>
