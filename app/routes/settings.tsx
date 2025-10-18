@@ -3,9 +3,17 @@ import {
   Download,
   Upload,
   Settings as SettingsIcon,
+  CheckCircle2,
 } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router";
+import { useRef, useState, useEffect } from "react";
+import {
+  Link,
+  useNavigation,
+  useSubmit,
+  useActionData,
+  Form,
+} from "react-router";
+import type { ClientActionFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
@@ -17,16 +25,85 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
-import {
-  exportAllData,
-  importAllDataWithConfirmation,
-} from "~/lib/data-operations";
+import { exportAllData } from "~/lib/data-operations";
+import { importData, validateExportData } from "~/lib/data-export";
+import { debouncedDataChange } from "~/lib/data-change-events";
 import { isSyncConfigured } from "~/lib/github-gist-sync";
 import {
   getShowHiddenTrackers,
   setShowHiddenTrackers,
   getEncryptionEnabled,
 } from "~/lib/user-settings";
+import { useStateWithDelayedReset } from "~/lib/hooks";
+
+export async function clientAction({ request }: ClientActionFunctionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  try {
+    if (intent === "export") {
+      const result = await exportAllData();
+      return {
+        success: result.success,
+        message: result.message,
+        intent: "export",
+      };
+    }
+
+    if (intent === "import") {
+      const file = formData.get("file");
+      if (!file || !(file instanceof File)) {
+        return {
+          success: false,
+          message: "No file selected",
+          intent: "import",
+        };
+      }
+
+      const text = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsText(file);
+      });
+
+      const data = JSON.parse(text);
+
+      if (!validateExportData(data)) {
+        return {
+          success: false,
+          message: "Invalid data format",
+          intent: "import",
+        };
+      }
+
+      await importData(data, true);
+      debouncedDataChange.dispatch("data_imported");
+
+      return {
+        success: true,
+        message: "Data imported successfully",
+        shouldReload: true,
+        intent: "import",
+      };
+    }
+
+    if (intent === "toggleHiddenTrackers") {
+      const showHidden = formData.get("showHidden") === "true";
+      setShowHiddenTrackers(showHidden);
+      window.dispatchEvent(new Event("storage"));
+      return { success: true };
+    }
+
+    return { success: false, message: "Unknown intent" };
+  } catch (error) {
+    console.error("Settings action error:", error);
+    return {
+      success: false,
+      message: error instanceof Error ? error.message : "An error occurred",
+    };
+  }
+}
 
 export function meta() {
   return [
@@ -41,8 +118,12 @@ export function meta() {
 }
 
 export default function SettingsPage() {
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+  const navigation = useNavigation();
+  const submit = useSubmit();
+  const actionData = useActionData<typeof clientAction>();
+  const transientActionData = useStateWithDelayedReset(actionData);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const importFormRef = useRef<HTMLFormElement>(null);
   const [showHiddenTrackers, setShowHiddenTrackersState] = useState(
     getShowHiddenTrackers()
   );
@@ -50,33 +131,46 @@ export default function SettingsPage() {
   const syncConfigured = isSyncConfigured();
   const encryptionEnabled = getEncryptionEnabled();
 
+  const isExporting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "export";
+  const isImporting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "import";
+
+  const exportSuccess =
+    transientActionData?.success &&
+    "intent" in transientActionData &&
+    transientActionData.intent === "export";
+  const importSuccess =
+    transientActionData?.success &&
+    "intent" in transientActionData &&
+    transientActionData.intent === "import";
+
   const handleExport = async () => {
-    try {
-      setIsExporting(true);
-      const result = await exportAllData();
-      if (!result.success) {
-        alert(result.message);
-      }
-    } finally {
-      setIsExporting(false);
-    }
+    const formData = new FormData();
+    formData.append("intent", "export");
+    submit(formData, { method: "post" });
   };
 
-  const handleImport = async () => {
-    try {
-      setIsImporting(true);
-      const result = await importAllDataWithConfirmation();
-      if (result) {
-        if (result.success) {
-          alert(result.message);
-          window.location.reload();
-        } else {
-          alert(result.message);
-        }
-      }
-    } finally {
-      setIsImporting(false);
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm("Import data? This will replace all existing data.")) {
+      event.target.value = "";
+      return;
     }
+
+    if (importFormRef.current) {
+      submit(importFormRef.current, { method: "post" });
+    }
+
+    event.target.value = "";
   };
 
   const getGitHubSyncStatus = () => {
@@ -93,9 +187,11 @@ export default function SettingsPage() {
 
   const handleToggleHiddenTrackers = (checked: boolean) => {
     setShowHiddenTrackersState(checked);
-    setShowHiddenTrackers(checked);
-    // Trigger a page reload to refresh the tracker list
-    window.dispatchEvent(new Event("storage"));
+
+    const formData = new FormData();
+    formData.append("intent", "toggleHiddenTrackers");
+    formData.append("showHidden", checked.toString());
+    submit(formData, { method: "post" });
   };
 
   return (
@@ -112,7 +208,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex flex-col py-6 gap-4">
-        {/* Data Management Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -130,17 +225,49 @@ export default function SettingsPage() {
                 disabled={isExporting}
                 className="w-full justify-start"
               >
-                <Download className="h-4 w-4 mr-2" />
-                {isExporting ? "Downloading..." : "Download my data"}
+                {exportSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+                    Exported
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    {isExporting ? "Downloading..." : "Download my data"}
+                  </>
+                )}
               </Button>
+              <Form
+                ref={importFormRef}
+                className="hidden"
+                encType="multipart/form-data"
+              >
+                <input type="hidden" name="intent" value="import" />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  name="file"
+                  accept=".json"
+                  onChange={handleFileChange}
+                />
+              </Form>
               <Button
                 variant="outline"
-                onClick={handleImport}
+                onClick={handleImportClick}
                 disabled={isImporting}
                 className="w-full justify-start"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                {isImporting ? "Importing..." : "Import data"}
+                {importSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+                    Imported
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isImporting ? "Importing..." : "Import data"}
+                  </>
+                )}
               </Button>
               <div className="text-xs text-muted-foreground mt-2">
                 Download creates a JSON file with all your trackers and history.
@@ -150,7 +277,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* GitHub Sync Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -203,7 +329,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Hidden Trackers Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -246,7 +371,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* About Section */}
         <Card>
           <CardHeader>
             <CardTitle>About</CardTitle>
