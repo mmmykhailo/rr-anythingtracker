@@ -33,6 +33,7 @@ export interface ExportData {
     entryId: string;
     trackerId: string;
     tagName: string;
+    tagNameWithOriginalCasing?: string;
   }>;
 }
 
@@ -74,6 +75,7 @@ export async function exportData(): Promise<ExportData> {
       entryId: tag.entryId,
       trackerId: tag.trackerId,
       tagName: tag.tagName,
+      tagNameWithOriginalCasing: tag.tagNameWithOriginalCasing,
     })),
   };
 
@@ -128,6 +130,7 @@ export async function importData(
         entryId: tag.entryId,
         trackerId: tag.trackerId,
         tagName: tag.tagName,
+        tagNameWithOriginalCasing: tag.tagNameWithOriginalCasing || tag.tagName,
       });
     }
   }
@@ -219,7 +222,9 @@ export function validateExportData(data: any): data is ExportData {
             typeof tag.id === "string" &&
             typeof tag.entryId === "string" &&
             typeof tag.trackerId === "string" &&
-            typeof tag.tagName === "string"
+            typeof tag.tagName === "string" &&
+            (tag.tagNameWithOriginalCasing === undefined ||
+              typeof tag.tagNameWithOriginalCasing === "string")
         )))
   );
 }
