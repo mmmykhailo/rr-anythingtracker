@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLoaderData, useRevalidator, useNavigate } from "react-router";
 import type { ClientLoaderFunctionArgs } from "react-router";
-import { Save } from "lucide-react";
+import { Save, Trash2 } from "lucide-react";
 import { getTrackerById, getEntryHistory } from "~/lib/db";
 import { useTrackerMutations, useFormState } from "~/lib/hooks";
 import { Button } from "~/components/ui/button";
@@ -70,8 +70,9 @@ export default function TrackerEditPage() {
   const { tracker, hasEntries } = useLoaderData<typeof clientLoader>();
   const revalidator = useRevalidator();
   const navigate = useNavigate();
-  const { modifyTracker } = useTrackerMutations();
+  const { modifyTracker, removeTracker } = useTrackerMutations();
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [isCheckboxTypeSelected, setIsCheckboxTypeSelected] = useState(
     tracker.type === "checkbox"
   );
@@ -124,6 +125,27 @@ export default function TrackerEditPage() {
       console.error("Failed to update tracker:", error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${tracker.title}"? This will remove all data for this tracker.`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setIsDeleting(true);
+      await removeTracker(tracker.id);
+      navigate("/");
+    } catch (error) {
+      console.error("Failed to delete tracker:", error);
+      alert("Failed to delete tracker. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -252,10 +274,20 @@ export default function TrackerEditPage() {
         )}
       </div>
 
-      <Button onClick={handleSave} disabled={isSaving}>
-        <Save />
-        {isSaving ? "Saving..." : "Save"}
-      </Button>
+      <div className="flex gap-2">
+        <Button onClick={handleSave} disabled={isSaving || isDeleting}>
+          <Save />
+          {isSaving ? "Saving..." : "Save"}
+        </Button>
+        <Button
+          onClick={handleDelete}
+          disabled={isSaving || isDeleting}
+          variant="destructive"
+        >
+          <Trash2 />
+          {isDeleting ? "Deleting..." : "Delete"}
+        </Button>
+      </div>
     </div>
   );
 }

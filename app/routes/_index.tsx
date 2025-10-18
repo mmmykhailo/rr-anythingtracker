@@ -1,29 +1,19 @@
 import { addDays, format } from "date-fns";
 import {
-  BarChart3,
   Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Edit,
   Plus,
   Settings,
-  Trash2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Link, useLoaderData, useNavigate } from "react-router";
 import type { ClientLoaderFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuTrigger,
-} from "~/components/ui/context-menu";
 import { Separator } from "~/components/ui/separator";
 import { formatDateForDisplay, getDaysArray, isDateToday } from "~/lib/dates";
-import { useDatabase, useTrackerMutations } from "~/lib/hooks";
+import { useDatabase } from "~/lib/hooks";
 import { getAllTrackers } from "~/lib/db";
 import { formatStoredValue } from "~/lib/number-conversions";
 import { SyncButton } from "~/components/SyncButton";
@@ -59,8 +49,6 @@ export default function Home() {
   const { trackers } = useLoaderData<typeof clientLoader>();
   const navigate = useNavigate();
   const { isInitialized, error: dbError } = useDatabase();
-  const { removeTracker, loading: mutationLoading } = useTrackerMutations();
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
   const [showHiddenTrackers, setShowHiddenTrackers] = useState(() =>
     getShowHiddenTrackers()
@@ -196,35 +184,6 @@ export default function Home() {
     setCurrentLastDate((prev) => addDays(prev, DAYS_TO_SHOW));
   };
 
-  const handleDeleteTracker = async (
-    e: React.MouseEvent,
-    trackerId: string,
-    trackerTitle: string
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (
-      !confirm(
-        `Are you sure you want to delete "${trackerTitle}"? This will remove all data for this tracker.`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      setDeletingId(trackerId);
-      await removeTracker(trackerId);
-      // Refresh the page to reload data after deletion
-      navigate("/", { replace: true });
-    } catch (error) {
-      console.error("Failed to delete tracker:", error);
-      alert("Failed to delete tracker. Please try again.");
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
   if (!isInitialized) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -311,130 +270,98 @@ export default function Home() {
               )}
             >
               <Separator />
-              <ContextMenu>
-                <ContextMenuTrigger asChild>
-                  <div className="relative flex items-stretch cursor-context-menu">
-                    <div className="w-1/3 flex items-stretch min-h-[52px]">
-                      {!tracker.parentId && hasChildren(tracker.id) && (
-                        <div className="w-8 flex-shrink-0">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              toggleExpanded(tracker.id);
-                            }}
-                            aria-label={
-                              expandedTrackers.has(tracker.id)
-                                ? "Collapse"
-                                : "Expand"
-                            }
-                            className="w-full h-full cursor-pointer transition-colors hover:bg-accent flex items-center justify-center"
-                          >
-                            {expandedTrackers.has(tracker.id) ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </button>
-                        </div>
-                      )}
-                      <Link
-                        to={`/t/${tracker.id}/history`}
-                        prefetch="viewport"
-                        className="flex-1 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center max-w-full"
+              <div className="relative flex items-stretch">
+                <div className="w-1/3 flex items-stretch min-h-[52px]">
+                  {!tracker.parentId && hasChildren(tracker.id) && (
+                    <div className="w-8 flex-shrink-0">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          toggleExpanded(tracker.id);
+                        }}
+                        aria-label={
+                          expandedTrackers.has(tracker.id)
+                            ? "Collapse"
+                            : "Expand"
+                        }
+                        className="w-full h-full cursor-pointer transition-colors hover:bg-accent flex items-center justify-center"
                       >
-                        <span
-                          className={clsx("text-xs line-clamp-2 break-words", {
-                            "ml-8": tracker.parentId,
-                          })}
-                        >
-                          {tracker.title}
-                        </span>
-                      </Link>
+                        {expandedTrackers.has(tracker.id) ? (
+                          <ChevronDown className="h-4 w-4" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4" />
+                        )}
+                      </button>
                     </div>
-                    <div
-                      className="w-2/3 grid gap-1 shrink-0"
-                      style={{
-                        gridTemplateColumns: `repeat(${DAYS_TO_SHOW}, minmax(0, 1fr))`,
-                      }}
-                    >
-                      {datesToShow.map((dateString) => {
-                        const value = tracker.values[dateString] || 0;
-
-                        return (
-                          <div
-                            className={clsx(
-                              "text-center flex flex-col justify-center leading-none gap-1 p-2 relative transition-colors hover:bg-accent",
-                              {
-                                "opacity-50": value === 0,
-                                "text-zinc-400":
-                                  tracker.goal && value < tracker.goal,
-                                "text-green-600":
-                                  tracker.goal && value >= tracker.goal,
-                              }
-                            )}
-                            key={dateString}
-                          >
-                            {tracker.type !== "checkbox" ? (
-                              <span className="font-semibold text-xs">
-                                {formatStoredValue(value, tracker.type)}
-                              </span>
-                            ) : (
-                              <>
-                                {!!value && (
-                                  <Check size={24} className="mx-auto" />
-                                )}
-                              </>
-                            )}
-
-                            {tracker.type !== "checkbox" &&
-                              tracker.type !== "none" && (
-                                <span className="text-xs opacity-60">
-                                  {tracker.type}
-                                </span>
-                              )}
-                            <Link
-                              to={`/t/${tracker.id}/log-entry`}
-                              prefetch="viewport"
-                              className="absolute inset-0"
-                              state={{ dateString }}
-                              aria-label={`Open ${tracker.title} tracker`}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </ContextMenuTrigger>
-                <ContextMenuContent className="w-48">
-                  <ContextMenuItem asChild>
-                    <Link to={`/t/${tracker.id}/log-entry`} prefetch="viewport">
-                      <BarChart3 className="mr-2 h-4 w-4" />
-                      Open Tracker
-                    </Link>
-                  </ContextMenuItem>
-                  <ContextMenuItem asChild>
-                    <Link to={`/t/${tracker.id}/log-entry`} prefetch="viewport">
-                      <Edit className="mr-2 h-4 w-4" />
-                      Log Entry
-                    </Link>
-                  </ContextMenuItem>
-                  <ContextMenuSeparator />
-                  <ContextMenuItem
-                    className="text-red-600 focus:text-red-600"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleDeleteTracker(e, tracker.id, tracker.title);
-                    }}
-                    disabled={deletingId === tracker.id}
+                  )}
+                  <Link
+                    to={`/t/${tracker.id}/history`}
+                    prefetch="viewport"
+                    className="flex-1 min-h-full font-medium p-2 relative transition-colors hover:bg-accent flex flex-col justify-center max-w-full"
                   >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    {deletingId === tracker.id
-                      ? "Deleting..."
-                      : "Delete Tracker"}
-                  </ContextMenuItem>
-                </ContextMenuContent>
-              </ContextMenu>
+                    <span
+                      className={clsx("text-xs line-clamp-2 break-words", {
+                        "ml-8": tracker.parentId,
+                      })}
+                    >
+                      {tracker.title}
+                    </span>
+                  </Link>
+                </div>
+                <div
+                  className="w-2/3 grid gap-1 shrink-0"
+                  style={{
+                    gridTemplateColumns: `repeat(${DAYS_TO_SHOW}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {datesToShow.map((dateString) => {
+                    const value = tracker.values[dateString] || 0;
+
+                    return (
+                      <div
+                        className={clsx(
+                          "text-center flex flex-col justify-center leading-none gap-1 p-2 relative transition-colors hover:bg-accent",
+                          {
+                            "opacity-50": value === 0,
+                            "text-zinc-400":
+                              tracker.goal && value < tracker.goal,
+                            "text-green-600":
+                              tracker.goal && value >= tracker.goal,
+                          }
+                        )}
+                        key={dateString}
+                      >
+                        {tracker.type !== "checkbox" ? (
+                          <span className="font-semibold text-xs">
+                            {formatStoredValue(value, tracker.type)}
+                          </span>
+                        ) : (
+                          <>
+                            {!!value && (
+                              <Check size={24} className="mx-auto" />
+                            )}
+                          </>
+                        )}
+
+                        {tracker.type !== "checkbox" &&
+                          tracker.type !== "none" && (
+                            <span className="text-xs opacity-60">
+                              {tracker.type}
+                            </span>
+                          )}
+                        <Link
+                          to={`/t/${tracker.id}/log-entry`}
+                          prefetch="viewport"
+                          className="absolute inset-0"
+                          state={{ dateString }}
+                          aria-label={`Open ${tracker.title} tracker`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           ))
         )}
