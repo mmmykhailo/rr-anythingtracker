@@ -1,5 +1,5 @@
-import { Plus, PlusIcon, X } from "lucide-react";
-import { useState } from "react";
+import { Plus, PlusIcon, X, Hash } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -14,6 +14,7 @@ import {
   displayUnits,
 } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
+import { getMostUsedTags } from "~/lib/db";
 
 import type { Tracker } from "~/lib/trackers";
 
@@ -36,6 +37,16 @@ export function EntryInput({
 }: EntryInputProps) {
   const [inputValue, setInputValue] = useState<number | null>(null);
   const [comment, setComment] = useState("");
+  const [mostUsedTags, setMostUsedTags] = useState<string[]>([]);
+
+  // Load most-used tags for this tracker
+  useEffect(() => {
+    const loadTags = async () => {
+      const tags = await getMostUsedTags(tracker.id, 5);
+      setMostUsedTags(tags);
+    };
+    loadTags();
+  }, [tracker.id, currentValue]); // Reload tags when entries change
 
   const handleCustomAdd = async () => {
     if (inputValue === null || inputValue === 0) {
@@ -49,6 +60,12 @@ export function EntryInput({
     } catch (error) {
       console.error("Failed to add custom value:", error);
     }
+  };
+
+  const handleTagClick = (tagName: string) => {
+    const tag = `#${tagName}`;
+    // Add tag to comment with a space if comment already has content
+    setComment((prev) => (prev ? `${prev} ${tag}` : tag));
   };
 
   const quickAddValues = quickAddValuesMap[tracker.type];
@@ -101,6 +118,22 @@ export function EntryInput({
                   placeholder="Add a note (optional)"
                 />
               </div>
+              {mostUsedTags.length > 0 && (
+                <div className="flex gap-2 flex-wrap -mt-2">
+                  {mostUsedTags.map((tag) => (
+                    <Button
+                      key={tag}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleTagClick(tag)}
+                      className="h-7 text-xs"
+                    >
+                      <Hash className="w-3 h-3" />
+                      {tag}
+                    </Button>
+                  ))}
+                </div>
+              )}
               <Button
                 variant="outline"
                 onClick={async () => {
@@ -173,6 +206,23 @@ export function EntryInput({
               placeholder="Add a note (optional)"
             />
           </div>
+
+          {mostUsedTags.length > 0 && (
+            <div className="flex gap-2 flex-wrap -mt-2">
+              {mostUsedTags.map((tag) => (
+                <Button
+                  key={tag}
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleTagClick(tag)}
+                  className="h-7 text-xs"
+                >
+                  <Hash className="w-3 h-3" />
+                  {tag}
+                </Button>
+              ))}
+            </div>
+          )}
 
           <Button
             onClick={handleCustomAdd}
