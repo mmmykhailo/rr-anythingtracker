@@ -39,14 +39,13 @@ export function EntryInput({
   const [comment, setComment] = useState("");
   const [mostUsedTags, setMostUsedTags] = useState<string[]>([]);
 
-  // Load most-used tags for this tracker
   useEffect(() => {
     const loadTags = async () => {
       const tags = await getMostUsedTags(tracker.id, 5);
       setMostUsedTags(tags);
     };
     loadTags();
-  }, [tracker.id, currentValue]); // Reload tags when entries change
+  }, [tracker.id, currentValue]);
 
   const handleCustomAdd = async () => {
     if (inputValue === null || inputValue === 0) {
@@ -64,8 +63,13 @@ export function EntryInput({
 
   const handleTagClick = (tagName: string) => {
     const tag = `#${tagName}`;
-    // Add tag to comment with a space if comment already has content
-    setComment((prev) => (prev ? `${prev} ${tag}` : tag));
+    setComment((prev) => {
+      if (prev) {
+        const trimmedPrev = prev.replace(/ (?=[^ ]*$)/, "");
+        return `${trimmedPrev} ${tag}`;
+      }
+      return tag;
+    });
   };
 
   const quickAddValues = quickAddValuesMap[tracker.type];
