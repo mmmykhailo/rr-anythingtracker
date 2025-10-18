@@ -21,7 +21,7 @@ type EntryInputProps = {
   tracker: Tracker;
   currentValue: number;
   selectedDate: string;
-  onQuickAdd: (value: number, comment?: string) => Promise<void>;
+  onSubmit: (value: number, comment?: string) => Promise<void>;
   onCheckboxChange: (checked: boolean, comment?: string) => Promise<void>;
   entryLoading: boolean;
   mostUsedTags: string[];
@@ -31,7 +31,7 @@ export function EntryInput({
   tracker,
   currentValue,
   selectedDate,
-  onQuickAdd,
+  onSubmit,
   onCheckboxChange,
   entryLoading,
   mostUsedTags,
@@ -45,7 +45,7 @@ export function EntryInput({
     }
 
     try {
-      await onQuickAdd(inputValue, comment);
+      await onSubmit(inputValue, comment);
       setInputValue(null);
       setComment("");
     } catch (error) {

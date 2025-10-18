@@ -105,7 +105,7 @@ export default function LogEntryPage() {
         tracker={tracker}
         currentValue={currentValue}
         selectedDate={selectedDate}
-        onQuickAdd={handleQuickAdd}
+        onSubmit={handleQuickAdd}
         onCheckboxChange={handleCheckboxChange}
         entryLoading={entryLoading}
         mostUsedTags={mostUsedTags}
