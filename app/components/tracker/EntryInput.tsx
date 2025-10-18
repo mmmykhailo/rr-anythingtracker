@@ -1,5 +1,5 @@
 import { Plus, PlusIcon, X, Hash } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -14,17 +14,17 @@ import {
   displayUnits,
 } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
-import { getMostUsedTags } from "~/lib/db";
 
 import type { Tracker } from "~/lib/trackers";
 
 type EntryInputProps = {
   tracker: Tracker;
-  currentValue: number; // This is the stored integer value
+  currentValue: number;
   selectedDate: string;
   onQuickAdd: (value: number, comment?: string) => Promise<void>;
   onCheckboxChange: (checked: boolean, comment?: string) => Promise<void>;
   entryLoading: boolean;
+  mostUsedTags: string[];
 };
 
 export function EntryInput({
@@ -34,18 +34,10 @@ export function EntryInput({
   onQuickAdd,
   onCheckboxChange,
   entryLoading,
+  mostUsedTags,
 }: EntryInputProps) {
   const [inputValue, setInputValue] = useState<number | null>(null);
   const [comment, setComment] = useState("");
-  const [mostUsedTags, setMostUsedTags] = useState<string[]>([]);
-
-  useEffect(() => {
-    const loadTags = async () => {
-      const tags = await getMostUsedTags(tracker.id, 5);
-      setMostUsedTags(tags);
-    };
-    loadTags();
-  }, [tracker.id, currentValue]);
 
   const handleCustomAdd = async () => {
     if (inputValue === null || inputValue === 0) {

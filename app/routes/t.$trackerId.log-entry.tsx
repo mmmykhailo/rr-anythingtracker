@@ -3,7 +3,7 @@ import { useParams, useLoaderData, useLocation } from "react-router";
 import type { ClientLoaderFunctionArgs } from "react-router";
 import { formatDateString } from "~/lib/dates";
 import { useTrackerEntries } from "~/lib/hooks";
-import { getTrackerById } from "~/lib/db";
+import { getTrackerById, getMostUsedTags } from "~/lib/db";
 import { TrackerHeader, EntryInput } from "~/components/tracker";
 
 export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
@@ -17,7 +17,8 @@ export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
     if (!tracker) {
       throw new Response("Tracker not found", { status: 404 });
     }
-    return { tracker };
+    const mostUsedTags = await getMostUsedTags(trackerId, 5);
+    return { tracker, mostUsedTags };
   } catch (error) {
     throw new Response("Failed to load tracker", { status: 500 });
   }
@@ -37,7 +38,7 @@ export function meta({ params }: { params: { trackerId: string } }) {
 export default function LogEntryPage() {
   const { trackerId } = useParams();
   const location = useLocation();
-  const { tracker } = useLoaderData<typeof clientLoader>();
+  const { tracker, mostUsedTags } = useLoaderData<typeof clientLoader>();
   const [currentValue, setCurrentValue] = useState(0);
   const [selectedDate, setSelectedDate] = useState(() =>
     location?.state?.dateString
@@ -107,6 +108,7 @@ export default function LogEntryPage() {
         onQuickAdd={handleQuickAdd}
         onCheckboxChange={handleCheckboxChange}
         entryLoading={entryLoading}
+        mostUsedTags={mostUsedTags}
       />
     </div>
   );
