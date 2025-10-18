@@ -27,6 +27,12 @@ import {
   setEncryptionEnabled,
 } from "~/lib/user-settings";
 
+type GithubSyncSettingsPageErrors = {
+  token?: string;
+  gist?: string;
+  general?: string;
+};
+
 export async function clientLoader({ request }: ClientLoaderFunctionArgs) {
   return {
     githubToken: getGithubToken() || "",
@@ -113,17 +119,14 @@ export default function GitHubSyncSettingsPage() {
   const isSaving = navigation.state === "submitting" && navigation.formData?.get("intent") === "save";
   const isSyncEnabled = loaderData.isSyncEnabled;
 
-  const errors = useMemo(() => {
+  const errors = useMemo((): GithubSyncSettingsPageErrors => {
     if (actionData && "error" in actionData && actionData.error) {
       return actionData.error;
     }
     return {};
   }, [actionData]);
 
-  // Check if coming from onboarding
   const isFromOnboarding = location.state?.from === "onboarding";
-
-  // Check if there's existing data in the Gist
   useEffect(() => {
     async function checkExistingData() {
       if (githubToken && gistId) {
@@ -135,7 +138,6 @@ export default function GitHubSyncSettingsPage() {
           });
           setHasExistingGistData(!!data);
         } catch (error) {
-          // Ignore errors, assume no data
           setHasExistingGistData(false);
         }
       }
