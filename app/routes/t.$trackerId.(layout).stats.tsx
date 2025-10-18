@@ -4,6 +4,7 @@ import type { ClientLoaderFunctionArgs } from "react-router";
 import { getTrackerById, getEntryHistory } from "~/lib/db";
 import { TrackerTotalHalfYearChart } from "~/components/tracker/charts/TrackerTotalHalfYearChart";
 import { TrackerAverageHalfYearChart } from "~/components/tracker/charts/TrackerAverageHalfYearChart";
+import { TrackerContributionGraph } from "~/components/tracker/charts/TrackerContributionGraph";
 import {
   Card,
   CardDescription,
@@ -170,7 +171,7 @@ export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   }
 }
 
-export function meta({ params }: { params: { trackerId: string } }) {
+export function meta() {
   return [
     { title: "Charts - AnythingTracker" },
     {
@@ -253,6 +254,12 @@ export default function TrackerChartsPage() {
           </CardHeader>
         </Card>
       </div>
+
+      <TrackerContributionGraph
+        className="min-w-0 max-w-full"
+        tracker={tracker}
+        entries={entries}
+      />
 
       <TrackerTotalHalfYearChart tracker={tracker} entries={entries} />
 
