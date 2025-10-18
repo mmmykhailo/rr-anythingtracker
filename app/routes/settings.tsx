@@ -5,7 +5,8 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useNavigation, useSubmit } from "react-router";
+import type { ClientActionFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
@@ -28,6 +29,42 @@ import {
   getEncryptionEnabled,
 } from "~/lib/user-settings";
 
+export async function clientAction({ request }: ClientActionFunctionArgs) {
+  const formData = await request.formData();
+  const intent = formData.get("intent");
+
+  try {
+    if (intent === "export") {
+      const result = await exportAllData();
+      return { success: result.success, message: result.message };
+    }
+
+    if (intent === "import") {
+      const result = await importAllDataWithConfirmation();
+      if (result) {
+        return {
+          success: result.success,
+          message: result.message,
+          shouldReload: result.success
+        };
+      }
+      return { success: false, message: "Import cancelled" };
+    }
+
+    if (intent === "toggleHiddenTrackers") {
+      const showHidden = formData.get("showHidden") === "true";
+      setShowHiddenTrackers(showHidden);
+      window.dispatchEvent(new Event("storage"));
+      return { success: true };
+    }
+
+    return { success: false, message: "Unknown intent" };
+  } catch (error) {
+    console.error("Settings action error:", error);
+    return { success: false, message: "An error occurred" };
+  }
+}
+
 export function meta() {
   return [
     { title: "Settings - AnythingTracker" },
@@ -41,8 +78,8 @@ export function meta() {
 }
 
 export default function SettingsPage() {
-  const [isExporting, setIsExporting] = useState(false);
-  const [isImporting, setIsImporting] = useState(false);
+  const navigation = useNavigation();
+  const submit = useSubmit();
   const [showHiddenTrackers, setShowHiddenTrackersState] = useState(
     getShowHiddenTrackers()
   );
@@ -50,33 +87,19 @@ export default function SettingsPage() {
   const syncConfigured = isSyncConfigured();
   const encryptionEnabled = getEncryptionEnabled();
 
+  const isExporting = navigation.state === "submitting" && navigation.formData?.get("intent") === "export";
+  const isImporting = navigation.state === "submitting" && navigation.formData?.get("intent") === "import";
+
   const handleExport = async () => {
-    try {
-      setIsExporting(true);
-      const result = await exportAllData();
-      if (!result.success) {
-        alert(result.message);
-      }
-    } finally {
-      setIsExporting(false);
-    }
+    const formData = new FormData();
+    formData.append("intent", "export");
+    submit(formData, { method: "post" });
   };
 
   const handleImport = async () => {
-    try {
-      setIsImporting(true);
-      const result = await importAllDataWithConfirmation();
-      if (result) {
-        if (result.success) {
-          alert(result.message);
-          window.location.reload();
-        } else {
-          alert(result.message);
-        }
-      }
-    } finally {
-      setIsImporting(false);
-    }
+    const formData = new FormData();
+    formData.append("intent", "import");
+    submit(formData, { method: "post" });
   };
 
   const getGitHubSyncStatus = () => {
@@ -93,9 +116,11 @@ export default function SettingsPage() {
 
   const handleToggleHiddenTrackers = (checked: boolean) => {
     setShowHiddenTrackersState(checked);
-    setShowHiddenTrackers(checked);
-    // Trigger a page reload to refresh the tracker list
-    window.dispatchEvent(new Event("storage"));
+
+    const formData = new FormData();
+    formData.append("intent", "toggleHiddenTrackers");
+    formData.append("showHidden", checked.toString());
+    submit(formData, { method: "post" });
   };
 
   return (
