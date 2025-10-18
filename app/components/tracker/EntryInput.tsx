@@ -11,6 +11,7 @@ import {
   toDisplayValue,
   getInputStep,
   formatForInput,
+  displayUnits,
 } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
 
@@ -126,6 +127,7 @@ export function EntryInput({
               {formatStoredValue(currentValue, tracker.type)}
               {displayGoal !== null &&
                 ` / ${formatStoredValue(tracker.goal!, tracker.type)}`}
+              {displayUnits[tracker.type]}
             </span>
           </div>
 
