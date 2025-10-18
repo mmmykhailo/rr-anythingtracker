@@ -53,7 +53,6 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
     if (intent === "import") {
       const file = formData.get("file");
       if (!file || !(file instanceof File)) {
-        console.log("No file selected", file);
         return {
           success: false,
           message: "No file selected",
@@ -67,8 +66,6 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
         reader.onerror = () => reject(new Error("Failed to read file"));
         reader.readAsText(file);
       });
-
-      console.log("Importing", text);
 
       const data = JSON.parse(text);
 
