@@ -3,9 +3,16 @@ import {
   Download,
   Upload,
   Settings as SettingsIcon,
+  CheckCircle2,
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
-import { Link, useNavigation, useSubmit, useActionData } from "react-router";
+import {
+  Link,
+  useNavigation,
+  useSubmit,
+  useActionData,
+  Form,
+} from "react-router";
 import type { ClientActionFunctionArgs } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -27,6 +34,7 @@ import {
   setShowHiddenTrackers,
   getEncryptionEnabled,
 } from "~/lib/user-settings";
+import { useStateWithDelayedReset } from "~/lib/hooks";
 
 export async function clientAction({ request }: ClientActionFunctionArgs) {
   const formData = await request.formData();
@@ -35,13 +43,22 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
   try {
     if (intent === "export") {
       const result = await exportAllData();
-      return { success: result.success, message: result.message };
+      return {
+        success: result.success,
+        message: result.message,
+        intent: "export",
+      };
     }
 
     if (intent === "import") {
       const file = formData.get("file");
       if (!file || !(file instanceof File)) {
-        return { success: false, message: "No file selected" };
+        console.log("No file selected", file);
+        return {
+          success: false,
+          message: "No file selected",
+          intent: "import",
+        };
       }
 
       const text = await new Promise<string>((resolve, reject) => {
@@ -51,10 +68,16 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
         reader.readAsText(file);
       });
 
+      console.log("Importing", text);
+
       const data = JSON.parse(text);
 
       if (!validateExportData(data)) {
-        return { success: false, message: "Invalid data format" };
+        return {
+          success: false,
+          message: "Invalid data format",
+          intent: "import",
+        };
       }
 
       await importData(data, true);
@@ -64,6 +87,7 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
         success: true,
         message: "Data imported successfully",
         shouldReload: true,
+        intent: "import",
       };
     }
 
@@ -100,7 +124,9 @@ export default function SettingsPage() {
   const navigation = useNavigation();
   const submit = useSubmit();
   const actionData = useActionData<typeof clientAction>();
+  const transientActionData = useStateWithDelayedReset(actionData);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const importFormRef = useRef<HTMLFormElement>(null);
   const [showHiddenTrackers, setShowHiddenTrackersState] = useState(
     getShowHiddenTrackers()
   );
@@ -115,12 +141,14 @@ export default function SettingsPage() {
     navigation.state === "submitting" &&
     navigation.formData?.get("intent") === "import";
 
-  // Reload page after successful import
-  useEffect(() => {
-    if (actionData && "shouldReload" in actionData && actionData.shouldReload) {
-      window.location.reload();
-    }
-  }, [actionData]);
+  const exportSuccess =
+    transientActionData?.success &&
+    "intent" in transientActionData &&
+    transientActionData.intent === "export";
+  const importSuccess =
+    transientActionData?.success &&
+    "intent" in transientActionData &&
+    transientActionData.intent === "import";
 
   const handleExport = async () => {
     const formData = new FormData();
@@ -137,17 +165,14 @@ export default function SettingsPage() {
     if (!file) return;
 
     if (!confirm("Import data? This will replace all existing data.")) {
-      // Reset the input so the same file can be selected again
       event.target.value = "";
       return;
     }
 
-    const formData = new FormData();
-    formData.append("intent", "import");
-    formData.append("file", file);
-    submit(formData, { method: "post" });
+    if (importFormRef.current) {
+      submit(importFormRef.current, { method: "post" });
+    }
 
-    // Reset the input
     event.target.value = "";
   };
 
@@ -186,7 +211,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex flex-col py-6 gap-4">
-        {/* Data Management Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -204,24 +228,49 @@ export default function SettingsPage() {
                 disabled={isExporting}
                 className="w-full justify-start"
               >
-                <Download className="h-4 w-4 mr-2" />
-                {isExporting ? "Downloading..." : "Download my data"}
+                {exportSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+                    Exported
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4 mr-2" />
+                    {isExporting ? "Downloading..." : "Download my data"}
+                  </>
+                )}
               </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".json"
-                onChange={handleFileChange}
+              <Form
+                ref={importFormRef}
                 className="hidden"
-              />
+                encType="multipart/form-data"
+              >
+                <input type="hidden" name="intent" value="import" />
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  name="file"
+                  accept=".json"
+                  onChange={handleFileChange}
+                />
+              </Form>
               <Button
                 variant="outline"
                 onClick={handleImportClick}
                 disabled={isImporting}
                 className="w-full justify-start"
               >
-                <Upload className="h-4 w-4 mr-2" />
-                {isImporting ? "Importing..." : "Import data"}
+                {importSuccess ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-green-600 dark:text-green-400" />
+                    Imported
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    {isImporting ? "Importing..." : "Import data"}
+                  </>
+                )}
               </Button>
               <div className="text-xs text-muted-foreground mt-2">
                 Download creates a JSON file with all your trackers and history.
@@ -231,7 +280,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* GitHub Sync Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -284,7 +332,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Hidden Trackers Section */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -327,7 +374,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* About Section */}
         <Card>
           <CardHeader>
             <CardTitle>About</CardTitle>
