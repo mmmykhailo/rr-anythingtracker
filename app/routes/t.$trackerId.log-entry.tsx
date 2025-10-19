@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import {
-  useParams,
   useLoaderData,
   useLocation,
   useSubmit,
@@ -118,7 +117,6 @@ export function meta({ params }: { params: { trackerId: string } }) {
 }
 
 export default function LogEntryPage() {
-  const { trackerId } = useParams();
   const location = useLocation();
   const navigation = useNavigation();
   const submit = useSubmit();
