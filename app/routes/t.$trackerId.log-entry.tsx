@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react";
 import {
   useLoaderData,
-  useLocation,
   useSubmit,
   useNavigation,
+  useNavigate,
 } from "react-router";
 import type {
   ClientLoaderFunctionArgs,
@@ -32,7 +31,6 @@ export async function clientLoader({
 
   const url = new URL(request.url);
   const dateParam = url.searchParams.get("date");
-  // TODO: FIX THIS, IT SHOULD REFLECT SELECTED DATE
   const selectedDate = dateParam || formatDateString(new Date());
 
   try {
@@ -118,35 +116,21 @@ export function meta({ params }: { params: { trackerId: string } }) {
 }
 
 export default function LogEntryPage() {
-  const location = useLocation();
   const navigation = useNavigation();
+  const navigate = useNavigate();
   const submit = useSubmit();
   const {
     tracker,
     mostUsedTags,
     currentValue: loaderCurrentValue,
-    selectedDate: loaderSelectedDate,
+    selectedDate,
   } = useLoaderData<typeof clientLoader>();
-
-  const [selectedDate, setSelectedDate] = useState(() =>
-    location?.state?.dateString
-      ? formatDateString(new Date(location.state.dateString))
-      : loaderSelectedDate
-  );
 
   const isLoading = navigation.state !== "idle";
 
-  // Update URL when date changes to keep loader data in sync
-  useEffect(() => {
-    if (selectedDate !== loaderSelectedDate) {
-      const url = new URL(window.location.href);
-      url.searchParams.set("date", selectedDate);
-      window.history.replaceState({}, "", url);
-
-      // Trigger revalidation by submitting an empty form
-      submit({}, { method: "get" });
-    }
-  }, [selectedDate, loaderSelectedDate, submit]);
+  const handleDateChange = (newDate: string) => {
+    navigate(`?date=${newDate}`, { replace: true });
+  };
 
   const handleQuickAdd = async (valueToAdd: number, comment?: string) => {
     const formData = new FormData();
@@ -185,7 +169,7 @@ export default function LogEntryPage() {
       <TrackerHeader
         trackerTitle={tracker.title}
         selectedDate={selectedDate}
-        onDateChange={setSelectedDate}
+        onDateChange={handleDateChange}
       />
 
       <EntryInput

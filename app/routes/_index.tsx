@@ -333,10 +333,9 @@ export default function Home() {
                             </span>
                           )}
                         <Link
-                          to={`/t/${tracker.id}/log-entry`}
+                          to={`/t/${tracker.id}/log-entry?date=${dateString}`}
                           prefetch="viewport"
                           className="absolute inset-0"
-                          state={{ dateString }}
                           aria-label={`Open ${tracker.title} tracker`}
                         />
                       </div>
