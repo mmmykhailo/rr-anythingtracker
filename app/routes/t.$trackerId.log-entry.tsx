@@ -32,6 +32,7 @@ export async function clientLoader({
 
   const url = new URL(request.url);
   const dateParam = url.searchParams.get("date");
+  // TODO: FIX THIS, IT SHOULD REFLECT SELECTED DATE
   const selectedDate = dateParam || formatDateString(new Date());
 
   try {
