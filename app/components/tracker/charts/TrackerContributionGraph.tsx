@@ -250,7 +250,7 @@ export function TrackerContributionGraph({
                       <TooltipTrigger>
                         <span
                           className={cn(
-                            "block h-3 w-3 rounded-sm hover:ring-2 hover:ring-ring",
+                            "block h-3 w-3 rounded-xs hover:ring-2 hover:ring-ring",
                             getContributionColorClassName(
                               dailyValue,
                               tracker.goal,
@@ -302,7 +302,7 @@ export function TrackerContributionGraph({
                 <TooltipTrigger>
                   <span
                     className={cn(
-                      "block h-3 w-3 rounded-sm hover:ring-2 hover:ring-ring",
+                      "block h-3 w-3 rounded-xs hover:ring-2 hover:ring-ring",
                       className
                     )}
                   />
