@@ -8,7 +8,7 @@ import {
   Settings,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { Link, useLoaderData, useNavigate } from "react-router";
+import { Link, redirect, useLoaderData } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { formatDateForDisplay, getDaysArray, isDateToday } from "~/lib/dates";
@@ -24,6 +24,10 @@ import type { Tracker } from "~/lib/trackers";
 const DAYS_TO_SHOW = 4;
 
 export async function clientLoader() {
+  if (!isOnboardingCompleted()) {
+    throw redirect("/onboarding");
+  }
+
   try {
     const trackers = await getAllTrackers();
     let savedExpandedTrackers: string[] = [];
@@ -54,8 +58,6 @@ export function meta() {
 export default function Home() {
   const { trackers, savedExpandedTrackers } =
     useLoaderData<typeof clientLoader>();
-  const navigate = useNavigate();
-  const { isInitialized, error: dbError } = useDatabase();
   const [currentLastDate, setCurrentLastDate] = useState(() => new Date());
   const [showHiddenTrackers, setShowHiddenTrackers] = useState(() =>
     getShowHiddenTrackers()
@@ -146,11 +148,6 @@ export default function Home() {
       return newSet;
     });
   };
-  useEffect(() => {
-    if (isInitialized && !isOnboardingCompleted()) {
-      navigate("/onboarding", { replace: true });
-    }
-  }, [isInitialized, navigate]);
 
   const datesToShow = getDaysArray(currentLastDate, DAYS_TO_SHOW);
   const currentFirstDate = new Date(datesToShow[0]);
@@ -167,22 +164,6 @@ export default function Home() {
   const goToNext = () => {
     setCurrentLastDate((prev) => addDays(prev, DAYS_TO_SHOW));
   };
-
-  if (!isInitialized) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div>Initializing database...</div>
-      </div>
-    );
-  }
-
-  if (dbError) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-600">Database error: {dbError}</div>
-      </div>
-    );
-  }
 
   return (
     <div>
