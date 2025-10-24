@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { toDisplayValue } from "~/lib/number-conversions";
+import { formatDateString } from "~/lib/dates";
 
 interface Stats {
   totalTracked: number;
@@ -49,7 +50,7 @@ function calculateStats(
   const dateRange: string[] = [];
   const current = new Date(earliestDate);
   while (current <= today) {
-    dateRange.push(current.toISOString().split("T")[0]);
+    dateRange.push(formatDateString(current));
     current.setDate(current.getDate() + 1);
   }
 
@@ -88,7 +89,7 @@ function calculateStats(
     Math.max(earliestDate.getTime(), startOfYear.getTime())
   );
   while (yearCurrent <= today) {
-    yearDateRange.push(yearCurrent.toISOString().split("T")[0]);
+    yearDateRange.push(formatDateString(yearCurrent));
     yearCurrent.setDate(yearCurrent.getDate() + 1);
   }
   const daysThisYear = yearDateRange.length;
@@ -109,23 +110,26 @@ function calculateStats(
     let goalMetDays = 0;
     let totalDaysWithGoal = 0;
 
-    dateRange.forEach((dateStr) => {
+    dateRange.forEach((dateStr, i) => {
       const value = dateValues.get(dateStr) || 0;
-      totalDaysWithGoal++;
 
       if (value >= goalValue) {
         currentStreak++;
         maxStreak = Math.max(maxStreak, currentStreak);
         goalMetDays++;
       } else {
+        if (i === dateRange.length - 1) {
+          return;
+        }
         currentStreak = 0;
         missedGoalDays++;
       }
+      totalDaysWithGoal++;
     });
 
-    const todayStr = today.toISOString().split("T")[0];
+    const todayStr = formatDateString(today);
     const todayValue = dateValues.get(todayStr) || 0;
-    currentGoalStreak = todayValue >= goalValue ? currentStreak : 0;
+    currentGoalStreak = currentStreak;
 
     longestGoalStreak = maxStreak;
     consistencyScore =
