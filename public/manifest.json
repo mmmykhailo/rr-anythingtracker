@@ -3,7 +3,7 @@
   "name": "AnythingTracker",
   "short_name": "AnythingTracker",
   "description": "Track Anything, Achieve Everything - Water intake, steps, habits, or any measurable activity",
-  "start_url": "/",
+  "start_url": "https://tracker.mykhailo.net/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
