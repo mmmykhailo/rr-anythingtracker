@@ -6,6 +6,7 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import { useEffect } from "react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -25,7 +26,7 @@ export const links: Route.LinksFunction = () => [
   },
   { rel: "manifest", href: "/manifest.json" },
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-  { rel: "apple-touch-icon", href: "/icons/icon-192x192.svg" },
+  { rel: "apple-touch-icon", href: "/icons/icon-192x192.png" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -63,6 +64,20 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Register service worker for PWA functionality
+    if ('serviceWorker' in navigator && import.meta.env.PROD) {
+      navigator.serviceWorker
+        .register('/sw.js')
+        .then((registration) => {
+          console.log('Service Worker registered successfully:', registration.scope);
+        })
+        .catch((error) => {
+          console.error('Service Worker registration failed:', error);
+        });
+    }
+  }, []);
+
   return <Outlet />;
 }
 
