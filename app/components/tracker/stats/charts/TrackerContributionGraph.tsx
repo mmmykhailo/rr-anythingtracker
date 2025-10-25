@@ -6,7 +6,7 @@ import {
 } from "~/components/ui/tooltip";
 import { Button } from "~/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "~/lib/utils";
 import { formatStoredValue } from "~/lib/number-conversions";
 import { ScrollArea, ScrollBar } from "~/components/ui/scroll-area";
@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import { scrollParentToChild } from "~/lib/scroll";
 
 interface Entry {
   id: string;
@@ -134,6 +135,7 @@ export function TrackerContributionGraph({
   className,
 }: TrackerContributionGraphProps) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const scrollableContentRef = useRef<HTMLDivElement>(null);
 
   const { weeks, yearNumberStr } = useMemo(() => {
     const yearStart = startOfYear(new Date(selectedYear, 0));
@@ -190,17 +192,19 @@ export function TrackerContributionGraph({
 
     if (selectedYear === currentYear) {
       requestAnimationFrame(() => {
+        if (!scrollableContentRef.current?.parentElement?.parentElement) {
+          return;
+        }
         const todayKey = formatDate(today, "yyyyMMdd");
         const todayElement = document.querySelector(
           `[data-date="${todayKey}"]`
         ) as HTMLElement;
 
         if (todayElement) {
-          todayElement.scrollIntoView({
-            behavior: "smooth",
-            inline: "center",
-            block: "nearest",
-          });
+          scrollParentToChild(
+            scrollableContentRef.current.parentElement.parentElement,
+            todayElement
+          );
         }
       });
     }
@@ -238,7 +242,7 @@ export function TrackerContributionGraph({
         skipDelayDuration={0}
       >
         <ScrollArea className="-mb-3 max-w-full">
-          <div className="flex gap-1 p-1 pb-3 px-6">
+          <div ref={scrollableContentRef} className="flex gap-1 p-1 pb-3 px-6">
             {weeks.map((week) => (
               <div key={week[0].toString()} className="flex flex-col gap-1">
                 {week.map((day) => {
