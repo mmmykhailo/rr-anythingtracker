@@ -8,8 +8,6 @@ export function scrollParentToChild(
     return;
   }
 
-  console.log("scrollParentToChild called");
-
   const parentRect = parent.getBoundingClientRect();
   const childRect = child.getBoundingClientRect();
 
@@ -36,10 +34,8 @@ export function scrollParentToChild(
   }
 
   if (isLeftOfViewport) {
-    console.log("scrolling left");
     scrollOptions.left = relativeLeft - scrollMargin;
   } else if (isRightOfViewport) {
-    console.log("scrolling right");
     scrollOptions.left = relativeRight - parent.clientWidth + scrollMargin;
   }
 
