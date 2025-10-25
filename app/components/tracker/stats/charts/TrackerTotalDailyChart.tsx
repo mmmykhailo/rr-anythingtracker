@@ -1,5 +1,3 @@
-"use client";
-
 import { TrendingUp } from "lucide-react";
 import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import {
@@ -54,7 +52,12 @@ export function TrackerTotalDailyChart({
   });
 
   // Build daily data
-  const chartData: { label: string; value: number; sortKey: string }[] = [];
+  const chartData: {
+    label: string;
+    fullDate: string;
+    value: number;
+    sortKey: string;
+  }[] = [];
   const currentDate = new Date(fromDate);
 
   while (currentDate <= toDate) {
@@ -64,6 +67,7 @@ export function TrackerTotalDailyChart({
 
     chartData.push({
       label: format(currentDate, "MMM d"),
+      fullDate: format(currentDate, "MMM d, yyyy"),
       value: displayValue,
       sortKey: dateKey,
     });
@@ -82,9 +86,7 @@ export function TrackerTotalDailyChart({
   const lastValue = chartData[chartData.length - 1]?.value || 0;
   const previousValue = chartData[chartData.length - 2]?.value || 0;
   const trend =
-    previousValue > 0
-      ? ((lastValue - previousValue) / previousValue) * 100
-      : 0;
+    previousValue > 0 ? ((lastValue - previousValue) / previousValue) * 100 : 0;
   const isPositiveTrend = trend > 0;
 
   const hasData = chartData.some((d) => d.value > 0);
@@ -114,19 +116,21 @@ export function TrackerTotalDailyChart({
                 tickLine={false}
                 axisLine={false}
                 tickMargin={8}
-                minTickGap={20}
-                tickFormatter={(value) => {
-                  // Show every few days to avoid overcrowding
-                  const index = chartData.findIndex((d) => d.label === value);
-                  if (chartData.length > 14) {
-                    return index % 3 === 0 ? value.slice(4) : "";
-                  }
-                  return value.slice(4);
-                }}
+                minTickGap={30}
+                interval="preserveStartEnd"
               />
               <ChartTooltip
                 cursor={false}
-                content={<ChartTooltipContent hideLabel />}
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(_, payload) => {
+                      if (payload && payload.length > 0) {
+                        return payload[0].payload.fullDate;
+                      }
+                      return "";
+                    }}
+                  />
+                }
               />
               <Bar dataKey="value" fill="var(--color-value)" radius={4} />
             </BarChart>

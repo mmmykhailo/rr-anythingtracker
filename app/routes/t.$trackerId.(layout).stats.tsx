@@ -4,7 +4,6 @@ import type { ClientLoaderFunctionArgs } from "react-router";
 import { getTrackerById, getEntryHistory } from "~/lib/db";
 import { TrackerTotalDailyChart } from "~/components/tracker/stats/charts/TrackerTotalDailyChart";
 import { TrackerTotalWeeklyChart } from "~/components/tracker/stats/charts/TrackerTotalWeeklyChart";
-import { TrackerAverageDailyChart } from "~/components/tracker/stats/charts/TrackerAverageDailyChart";
 import { TrackerAverageWeeklyChart } from "~/components/tracker/stats/charts/TrackerAverageWeeklyChart";
 import { TrackerCumulativeChart } from "~/components/tracker/stats/charts/TrackerCumulativeChart";
 import { TrackerContributionGraph } from "~/components/tracker/stats/charts/TrackerContributionGraph";
@@ -51,7 +50,15 @@ export async function clientLoader({
 
     const stats = calculateStats(entries, fromDate, toDate, tracker.goal);
 
-    return { tracker, entries, stats, selectedValue, showCustom, fromDate, toDate };
+    return {
+      tracker,
+      entries,
+      stats,
+      selectedValue,
+      showCustom,
+      fromDate,
+      toDate,
+    };
   } catch (error) {
     throw new Response("Failed to load tracker", { status: 500 });
   }
@@ -69,8 +76,15 @@ export function meta() {
 }
 
 export default function TrackerChartsPage() {
-  const { tracker, entries, stats, selectedValue, showCustom, fromDate, toDate } =
-    useLoaderData<typeof clientLoader>();
+  const {
+    tracker,
+    entries,
+    stats,
+    selectedValue,
+    showCustom,
+    fromDate,
+    toDate,
+  } = useLoaderData<typeof clientLoader>();
   const revalidator = useRevalidator();
   const navigate = useNavigate();
 
@@ -113,7 +127,8 @@ export default function TrackerChartsPage() {
   // Determine if we should show daily or weekly charts
   const showDailyCharts =
     selectedValue === "1M" ||
-    (selectedValue === "custom" && differenceInDays(new Date(toDate), new Date(fromDate)) <= 45);
+    (selectedValue === "custom" &&
+      differenceInDays(new Date(toDate), new Date(fromDate)) <= 45);
 
   return (
     <div className="grid gap-4">
@@ -125,7 +140,7 @@ export default function TrackerChartsPage() {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-4">
         <Card>
           <CardHeader>
             <CardDescription>Total</CardDescription>
@@ -145,20 +160,12 @@ export default function TrackerChartsPage() {
       </div>
 
       {showDailyCharts ? (
-        <>
-          <TrackerTotalDailyChart
-            tracker={tracker}
-            entries={entries}
-            fromDate={new Date(fromDate)}
-            toDate={new Date(toDate)}
-          />
-          <TrackerAverageDailyChart
-            tracker={tracker}
-            entries={entries}
-            fromDate={new Date(fromDate)}
-            toDate={new Date(toDate)}
-          />
-        </>
+        <TrackerTotalDailyChart
+          tracker={tracker}
+          entries={entries}
+          fromDate={new Date(fromDate)}
+          toDate={new Date(toDate)}
+        />
       ) : (
         <>
           <TrackerTotalWeeklyChart
@@ -184,7 +191,7 @@ export default function TrackerChartsPage() {
       />
 
       {hasGoal && (
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-4">
           <Card>
             <CardHeader>
               <CardDescription>Current goal streak</CardDescription>

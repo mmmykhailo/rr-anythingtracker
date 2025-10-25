@@ -1,6 +1,3 @@
-"use client";
-
-import { TrendingUp } from "lucide-react";
 import { CartesianGrid, Line, LineChart, XAxis } from "recharts";
 import {
   Card,
@@ -73,14 +70,20 @@ export function TrackerCumulativeChart({
       label = format(currentDate, "MMM d");
     } else if (days <= 120) {
       // Show weekly markers
-      if (currentDate.getDay() === 1 || currentDate.getTime() === fromDate.getTime()) {
+      if (
+        currentDate.getDay() === 1 ||
+        currentDate.getTime() === fromDate.getTime()
+      ) {
         label = format(currentDate, "MMM d");
       } else {
         label = "";
       }
     } else {
       // Show monthly markers
-      if (currentDate.getDate() === 1 || currentDate.getTime() === fromDate.getTime()) {
+      if (
+        currentDate.getDate() === 1 ||
+        currentDate.getTime() === fromDate.getTime()
+      ) {
         label = format(currentDate, "MMM d");
       } else {
         label = "";
@@ -159,10 +162,12 @@ export function TrackerCumulativeChart({
       {hasData && (
         <CardFooter className="flex-col items-start gap-2 text-sm">
           <div className="text-muted-foreground leading-none">
-            Total accumulated: {finalValue.toFixed(2)} {displayUnits[tracker.type]}
+            Total accumulated: {finalValue.toFixed(2)}{" "}
+            {displayUnits[tracker.type]}
           </div>
           <div className="text-muted-foreground leading-none">
-            Average daily: {avgDailyIncrease.toFixed(2)} {displayUnits[tracker.type]}
+            Average daily: {avgDailyIncrease.toFixed(2)}{" "}
+            {displayUnits[tracker.type]}
           </div>
         </CardFooter>
       )}
