@@ -176,11 +176,11 @@ export function EntryInput({
                   variant="outline"
                   key={value}
                   onClick={async () => {
-                    setInputValue(value);
+                    setInputValue((oldValue) => (oldValue || 0) + value);
                   }}
                   disabled={entryLoading}
                 >
-                  {label}
+                  +{label}
                 </Button>
               ))}
             </div>
