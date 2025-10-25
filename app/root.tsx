@@ -25,7 +25,7 @@ export const links: Route.LinksFunction = () => [
   },
   { rel: "manifest", href: "/manifest.json" },
   { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
-  { rel: "apple-touch-icon", href: "/icons/icon-192x192.svg" },
+  { rel: "apple-touch-icon", href: "/icons/icon-192x192.png" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
