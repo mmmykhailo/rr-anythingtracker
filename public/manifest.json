@@ -8,6 +8,7 @@
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
   "orientation": "portrait",
+  "lang": "en",
   "categories": ["health", "lifestyle", "productivity"],
   "icons": [
     {
