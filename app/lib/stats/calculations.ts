@@ -1,6 +1,7 @@
 import { formatDateString } from "~/lib/dates";
 import type { Stats } from "./types";
 
+// TODO: optimize this to avoid unnecessary loops
 export function calculateStats(
   entries: Array<{ date: string; value: number }>,
   fromDate: Date,
@@ -35,12 +36,21 @@ export function calculateStats(
   let consistencyScore = 0;
 
   if (goalValue && goalValue > 0) {
+    // Find the first date with any tracked entry
+    const firstTrackedIndex = dateRange.findIndex((dateStr) =>
+      dateValues.has(dateStr)
+    );
+
+    // Only calculate goal metrics from the first tracked day onwards
+    const goalDateRange =
+      firstTrackedIndex >= 0 ? dateRange.slice(firstTrackedIndex) : [];
+
     let currentStreak = 0;
     let maxStreak = 0;
     let goalMetDays = 0;
-    let totalDaysWithGoal = 0;
+    let totalDaysWithGoal = goalDateRange.length;
 
-    dateRange.forEach((dateStr, i) => {
+    goalDateRange.forEach((dateStr, i) => {
       const value = dateValues.get(dateStr) || 0;
 
       if (value >= goalValue) {
@@ -48,13 +58,12 @@ export function calculateStats(
         maxStreak = Math.max(maxStreak, currentStreak);
         goalMetDays++;
       } else {
-        if (i === dateRange.length - 1) {
+        if (i === goalDateRange.length - 1) {
           return;
         }
         currentStreak = 0;
         missedGoalDays++;
       }
-      totalDaysWithGoal++;
     });
 
     currentGoalStreak = currentStreak;
