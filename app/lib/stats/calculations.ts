@@ -59,6 +59,8 @@ export function calculateStats(
         goalMetDays++;
       } else {
         if (i === goalDateRange.length - 1) {
+          // do not take today into account if goal not met
+          totalDaysWithGoal = totalDaysWithGoal - 1;
           return;
         }
         currentStreak = 0;
