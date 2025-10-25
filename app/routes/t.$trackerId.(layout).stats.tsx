@@ -2,9 +2,12 @@ import { useEffect } from "react";
 import { useLoaderData, useRevalidator, useNavigate } from "react-router";
 import type { ClientLoaderFunctionArgs } from "react-router";
 import { getTrackerById, getEntryHistory } from "~/lib/db";
-import { TrackerTotalHalfYearChart } from "~/components/tracker/charts/TrackerTotalHalfYearChart";
-import { TrackerAverageHalfYearChart } from "~/components/tracker/charts/TrackerAverageHalfYearChart";
-import { TrackerContributionGraph } from "~/components/tracker/charts/TrackerContributionGraph";
+import { TrackerTotalDailyChart } from "~/components/tracker/stats/charts/TrackerTotalDailyChart";
+import { TrackerTotalWeeklyChart } from "~/components/tracker/stats/charts/TrackerTotalWeeklyChart";
+import { TrackerAverageDailyChart } from "~/components/tracker/stats/charts/TrackerAverageDailyChart";
+import { TrackerAverageWeeklyChart } from "~/components/tracker/stats/charts/TrackerAverageWeeklyChart";
+import { TrackerCumulativeChart } from "~/components/tracker/stats/charts/TrackerCumulativeChart";
+import { TrackerContributionGraph } from "~/components/tracker/stats/charts/TrackerContributionGraph";
 import {
   Card,
   CardDescription,
@@ -14,7 +17,7 @@ import {
 import { PeriodSelector } from "~/components/tracker/stats/PeriodSelector";
 import { getSelectedPeriod, calculateStats } from "~/lib/stats";
 import { toDisplayValue } from "~/lib/number-conversions";
-import { startOfToday } from "date-fns";
+import { startOfToday, differenceInDays } from "date-fns";
 
 export async function clientLoader({
   params,
@@ -48,7 +51,7 @@ export async function clientLoader({
 
     const stats = calculateStats(entries, fromDate, toDate, tracker.goal);
 
-    return { tracker, entries, stats, selectedValue, showCustom };
+    return { tracker, entries, stats, selectedValue, showCustom, fromDate, toDate };
   } catch (error) {
     throw new Response("Failed to load tracker", { status: 500 });
   }
@@ -66,7 +69,7 @@ export function meta() {
 }
 
 export default function TrackerChartsPage() {
-  const { tracker, entries, stats, selectedValue, showCustom } =
+  const { tracker, entries, stats, selectedValue, showCustom, fromDate, toDate } =
     useLoaderData<typeof clientLoader>();
   const revalidator = useRevalidator();
   const navigate = useNavigate();
@@ -107,6 +110,11 @@ export default function TrackerChartsPage() {
     navigate(`?from=${from}&to=${to}`);
   };
 
+  // Determine if we should show daily or weekly charts
+  const showDailyCharts =
+    selectedValue === "1M" ||
+    (selectedValue === "custom" && differenceInDays(new Date(toDate), new Date(fromDate)) <= 45);
+
   return (
     <div className="grid gap-4">
       <div className="flex justify-end">
@@ -136,15 +144,44 @@ export default function TrackerChartsPage() {
         </Card>
       </div>
 
-      <TrackerContributionGraph
-        className="min-w-0 max-w-full"
+      {showDailyCharts ? (
+        <>
+          <TrackerTotalDailyChart
+            tracker={tracker}
+            entries={entries}
+            fromDate={new Date(fromDate)}
+            toDate={new Date(toDate)}
+          />
+          <TrackerAverageDailyChart
+            tracker={tracker}
+            entries={entries}
+            fromDate={new Date(fromDate)}
+            toDate={new Date(toDate)}
+          />
+        </>
+      ) : (
+        <>
+          <TrackerTotalWeeklyChart
+            tracker={tracker}
+            entries={entries}
+            fromDate={new Date(fromDate)}
+            toDate={new Date(toDate)}
+          />
+          <TrackerAverageWeeklyChart
+            tracker={tracker}
+            entries={entries}
+            fromDate={new Date(fromDate)}
+            toDate={new Date(toDate)}
+          />
+        </>
+      )}
+
+      <TrackerCumulativeChart
         tracker={tracker}
         entries={entries}
+        fromDate={new Date(fromDate)}
+        toDate={new Date(toDate)}
       />
-
-      <TrackerTotalHalfYearChart tracker={tracker} entries={entries} />
-
-      <TrackerAverageHalfYearChart tracker={tracker} entries={entries} />
 
       {hasGoal && (
         <div className="grid grid-cols-2 gap-2">
@@ -184,6 +221,14 @@ export default function TrackerChartsPage() {
             </CardHeader>
           </Card>
         </div>
+      )}
+
+      {selectedValue === "YTD" && (
+        <TrackerContributionGraph
+          className="min-w-0 max-w-full"
+          tracker={tracker}
+          entries={entries}
+        />
       )}
     </div>
   );
