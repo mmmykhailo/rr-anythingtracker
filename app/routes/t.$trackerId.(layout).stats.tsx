@@ -1,10 +1,5 @@
 import { useEffect } from "react";
-import {
-  useLoaderData,
-  useRevalidator,
-  useSearchParams,
-  useNavigate,
-} from "react-router";
+import { useLoaderData, useRevalidator, useNavigate } from "react-router";
 import type { ClientLoaderFunctionArgs } from "react-router";
 import { getTrackerById, getEntryHistory } from "~/lib/db";
 import { TrackerTotalHalfYearChart } from "~/components/tracker/charts/TrackerTotalHalfYearChart";
@@ -16,192 +11,10 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { PeriodSelector } from "~/components/tracker/stats/PeriodSelector";
+import { getSelectedPeriod, calculateStats } from "~/lib/stats";
 import { toDisplayValue } from "~/lib/number-conversions";
-import { formatDateString } from "~/lib/dates";
-
-interface Stats {
-  totalTracked: number;
-  averagePerDay: number;
-  currentGoalStreak: number;
-  longestGoalStreak: number;
-  missedGoalDays: number;
-  consistencyScore: number;
-}
-
-type DateRangeOption = "1M" | "3M" | "YTD" | "1Y";
-
-function calculateDateFromPeriod(period: DateRangeOption, today: Date): Date {
-  const from = new Date(today);
-  from.setHours(0, 0, 0, 0);
-
-  if (period === "YTD") {
-    return new Date(today.getFullYear(), 0, 1);
-  } else if (period === "1M") {
-    from.setMonth(today.getMonth() - 1);
-    from.setDate(today.getDate() + 1);
-    if (from.getMonth() === today.getMonth()) {
-      from.setDate(1);
-    }
-    return from;
-  } else if (period === "3M") {
-    from.setMonth(today.getMonth() - 3);
-    from.setDate(today.getDate() + 1);
-    if (from.getMonth() === today.getMonth()) {
-      from.setDate(1);
-    }
-    return from;
-  } else if (period === "1Y") {
-    from.setFullYear(today.getFullYear() - 1);
-    from.setDate(today.getDate() + 1);
-    if (
-      from.getMonth() === today.getMonth() &&
-      from.getFullYear() === today.getFullYear()
-    ) {
-      from.setDate(1);
-    }
-    return from;
-  }
-  return from;
-}
-
-function getSelectedPeriod(
-  fromParam: string | null,
-  toParam: string | null,
-  today: Date
-): {
-  selectedValue: DateRangeOption | "custom";
-  showCustom: boolean;
-  fromDate: Date;
-  toDate: Date;
-} {
-  if (!fromParam || !toParam) {
-    const from = calculateDateFromPeriod("1M", today);
-    const to = today;
-    return {
-      selectedValue: "1M",
-      showCustom: false,
-      fromDate: from,
-      toDate: to,
-    };
-  }
-
-  const from = new Date(fromParam);
-  from.setHours(0, 0, 0, 0);
-  const to = new Date(toParam);
-  to.setHours(0, 0, 0, 0);
-
-  const todayStr = formatDateString(today);
-
-  if (toParam !== todayStr) {
-    return {
-      selectedValue: "custom",
-      showCustom: true,
-      fromDate: from,
-      toDate: to,
-    };
-  }
-
-  const periods: DateRangeOption[] = ["1M", "3M", "YTD", "1Y"];
-  for (const period of periods) {
-    const expectedFrom = calculateDateFromPeriod(period, today);
-    if (formatDateString(expectedFrom) === fromParam) {
-      return {
-        selectedValue: period,
-        showCustom: false,
-        fromDate: from,
-        toDate: to,
-      };
-    }
-  }
-
-  return {
-    selectedValue: "custom",
-    showCustom: true,
-    fromDate: from,
-    toDate: to,
-  };
-}
-
-function calculateStats(
-  entries: Array<{ date: string; value: number }>,
-  fromDate: Date,
-  toDate: Date,
-  goalValue?: number
-): Stats {
-  const dateValues = new Map<string, number>();
-  entries.forEach((entry) => {
-    const current = dateValues.get(entry.date) || 0;
-    dateValues.set(entry.date, current + entry.value);
-  });
-
-  const dateRange: string[] = [];
-  const current = new Date(fromDate);
-  while (current <= toDate) {
-    dateRange.push(formatDateString(current));
-    current.setDate(current.getDate() + 1);
-  }
-
-  let totalTracked = 0;
-  dateRange.forEach((dateStr) => {
-    const value = dateValues.get(dateStr) || 0;
-    totalTracked += value;
-  });
-
-  const totalDays = dateRange.length;
-  const averagePerDay = totalDays > 0 ? totalTracked / totalDays : 0;
-
-  let currentGoalStreak = 0;
-  let longestGoalStreak = 0;
-  let missedGoalDays = 0;
-  let consistencyScore = 0;
-
-  if (goalValue && goalValue > 0) {
-    let currentStreak = 0;
-    let maxStreak = 0;
-    let goalMetDays = 0;
-    let totalDaysWithGoal = 0;
-
-    dateRange.forEach((dateStr, i) => {
-      const value = dateValues.get(dateStr) || 0;
-
-      if (value >= goalValue) {
-        currentStreak++;
-        maxStreak = Math.max(maxStreak, currentStreak);
-        goalMetDays++;
-      } else {
-        if (i === dateRange.length - 1) {
-          return;
-        }
-        currentStreak = 0;
-        missedGoalDays++;
-      }
-      totalDaysWithGoal++;
-    });
-
-    currentGoalStreak = currentStreak;
-    longestGoalStreak = maxStreak;
-    consistencyScore =
-      totalDaysWithGoal > 0
-        ? Math.round((goalMetDays / totalDaysWithGoal) * 100)
-        : 0;
-  }
-
-  return {
-    totalTracked,
-    averagePerDay,
-    currentGoalStreak,
-    longestGoalStreak,
-    missedGoalDays,
-    consistencyScore,
-  };
-}
+import { startOfToday } from "date-fns";
 
 export async function clientLoader({
   params,
@@ -213,16 +26,11 @@ export async function clientLoader({
   }
 
   const url = new URL(request.url);
-  const fromParam = url.searchParams.get("from");
-  const toParam = url.searchParams.get("to");
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
 
   const { selectedValue, showCustom, fromDate, toDate } = getSelectedPeriod(
-    fromParam,
-    toParam,
-    today
+    url.searchParams.get("from"),
+    url.searchParams.get("to"),
+    startOfToday()
   );
 
   try {
@@ -295,34 +103,18 @@ export default function TrackerChartsPage() {
 
   const hasGoal = tracker.goal && tracker.goal > 0;
 
-  const handleDateRangeChange = (value: string) => {
-    if (value === "custom") return;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const to = formatDateString(today);
-
-    const from = calculateDateFromPeriod(value as DateRangeOption, today);
-    const fromStr = formatDateString(from);
-
-    navigate(`?from=${fromStr}&to=${to}`);
+  const handleDateRangeChange = (from: string, to: string) => {
+    navigate(`?from=${from}&to=${to}`);
   };
 
   return (
     <div className="grid gap-4">
       <div className="flex justify-end">
-        <Select value={selectedValue} onValueChange={handleDateRangeChange}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="1M">1M</SelectItem>
-            <SelectItem value="3M">3M</SelectItem>
-            <SelectItem value="YTD">YTD</SelectItem>
-            <SelectItem value="1Y">1Y</SelectItem>
-            {showCustom && <SelectItem value="custom">Custom</SelectItem>}
-          </SelectContent>
-        </Select>
+        <PeriodSelector
+          selectedValue={selectedValue}
+          showCustom={showCustom}
+          onDateRangeChange={handleDateRangeChange}
+        />
       </div>
 
       <div className="grid grid-cols-2 gap-2">
