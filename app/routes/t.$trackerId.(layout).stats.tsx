@@ -1,5 +1,10 @@
 import { useEffect } from "react";
-import { useLoaderData, useRevalidator } from "react-router";
+import {
+  useLoaderData,
+  useRevalidator,
+  useSearchParams,
+  useNavigate,
+} from "react-router";
 import type { ClientLoaderFunctionArgs } from "react-router";
 import { getTrackerById, getEntryHistory } from "~/lib/db";
 import { TrackerTotalHalfYearChart } from "~/components/tracker/charts/TrackerTotalHalfYearChart";
@@ -11,93 +16,146 @@ import {
   CardHeader,
   CardTitle,
 } from "~/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
 import { toDisplayValue } from "~/lib/number-conversions";
 import { formatDateString } from "~/lib/dates";
 
 interface Stats {
   totalTracked: number;
-  trackedThisYear: number;
-  trackedThisMonth: number;
-  trackedThisWeek: number;
-  averageOverall: number;
-  averageThisYear: number;
-  averageLast30Days: number;
-  averageLast7Days: number;
+  averagePerDay: number;
   currentGoalStreak: number;
   longestGoalStreak: number;
   missedGoalDays: number;
   consistencyScore: number;
-  currentYear: number;
+}
+
+type DateRangeOption = "1M" | "3M" | "YTD" | "1Y";
+
+function calculateDateFromPeriod(period: DateRangeOption, today: Date): Date {
+  const from = new Date(today);
+  from.setHours(0, 0, 0, 0);
+
+  if (period === "YTD") {
+    return new Date(today.getFullYear(), 0, 1);
+  } else if (period === "1M") {
+    from.setMonth(today.getMonth() - 1);
+    from.setDate(today.getDate() + 1);
+    if (from.getMonth() === today.getMonth()) {
+      from.setDate(1);
+    }
+    return from;
+  } else if (period === "3M") {
+    from.setMonth(today.getMonth() - 3);
+    from.setDate(today.getDate() + 1);
+    if (from.getMonth() === today.getMonth()) {
+      from.setDate(1);
+    }
+    return from;
+  } else if (period === "1Y") {
+    from.setFullYear(today.getFullYear() - 1);
+    from.setDate(today.getDate() + 1);
+    if (
+      from.getMonth() === today.getMonth() &&
+      from.getFullYear() === today.getFullYear()
+    ) {
+      from.setDate(1);
+    }
+    return from;
+  }
+  return from;
+}
+
+function getSelectedPeriod(
+  fromParam: string | null,
+  toParam: string | null,
+  today: Date
+): {
+  selectedValue: DateRangeOption | "custom";
+  showCustom: boolean;
+  fromDate: Date;
+  toDate: Date;
+} {
+  if (!fromParam || !toParam) {
+    const from = calculateDateFromPeriod("1M", today);
+    const to = today;
+    return {
+      selectedValue: "1M",
+      showCustom: false,
+      fromDate: from,
+      toDate: to,
+    };
+  }
+
+  const from = new Date(fromParam);
+  from.setHours(0, 0, 0, 0);
+  const to = new Date(toParam);
+  to.setHours(0, 0, 0, 0);
+
+  const todayStr = formatDateString(today);
+
+  if (toParam !== todayStr) {
+    return {
+      selectedValue: "custom",
+      showCustom: true,
+      fromDate: from,
+      toDate: to,
+    };
+  }
+
+  const periods: DateRangeOption[] = ["1M", "3M", "YTD", "1Y"];
+  for (const period of periods) {
+    const expectedFrom = calculateDateFromPeriod(period, today);
+    if (formatDateString(expectedFrom) === fromParam) {
+      return {
+        selectedValue: period,
+        showCustom: false,
+        fromDate: from,
+        toDate: to,
+      };
+    }
+  }
+
+  return {
+    selectedValue: "custom",
+    showCustom: true,
+    fromDate: from,
+    toDate: to,
+  };
 }
 
 function calculateStats(
   entries: Array<{ date: string; value: number }>,
+  fromDate: Date,
+  toDate: Date,
   goalValue?: number
 ): Stats {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
   const dateValues = new Map<string, number>();
   entries.forEach((entry) => {
     const current = dateValues.get(entry.date) || 0;
     dateValues.set(entry.date, current + entry.value);
   });
 
-  const sortedDates = Array.from(dateValues.keys()).sort();
-  const earliestDate = sortedDates[0] ? new Date(sortedDates[0]) : today;
-  earliestDate.setHours(0, 0, 0, 0);
-
   const dateRange: string[] = [];
-  const current = new Date(earliestDate);
-  while (current <= today) {
+  const current = new Date(fromDate);
+  while (current <= toDate) {
     dateRange.push(formatDateString(current));
     current.setDate(current.getDate() + 1);
   }
 
   let totalTracked = 0;
-  let trackedThisYear = 0;
-  let trackedLast30Days = 0;
-  let trackedLast7Days = 0;
-
-  const startOfYear = new Date(today.getFullYear(), 0, 1);
-  const last30DaysStart = new Date(today);
-  last30DaysStart.setDate(today.getDate() - 29);
-  const last7DaysStart = new Date(today);
-  last7DaysStart.setDate(today.getDate() - 6);
-
   dateRange.forEach((dateStr) => {
     const value = dateValues.get(dateStr) || 0;
-    const date = new Date(dateStr);
-
     totalTracked += value;
-
-    if (date >= startOfYear) {
-      trackedThisYear += value;
-    }
-    if (date >= last30DaysStart) {
-      trackedLast30Days += value;
-    }
-    if (date >= last7DaysStart) {
-      trackedLast7Days += value;
-    }
   });
 
   const totalDays = dateRange.length;
-
-  const yearDateRange: string[] = [];
-  const yearCurrent = new Date(
-    Math.max(earliestDate.getTime(), startOfYear.getTime())
-  );
-  while (yearCurrent <= today) {
-    yearDateRange.push(formatDateString(yearCurrent));
-    yearCurrent.setDate(yearCurrent.getDate() + 1);
-  }
-  const daysThisYear = yearDateRange.length;
-
-  const averageOverall = totalTracked / totalDays;
-  const averageThisYear = trackedThisYear / daysThisYear;
-  const averageLast30Days = trackedLast30Days / 30;
-  const averageLast7Days = trackedLast7Days / 7;
+  const averagePerDay = totalDays > 0 ? totalTracked / totalDays : 0;
 
   let currentGoalStreak = 0;
   let longestGoalStreak = 0;
@@ -127,10 +185,7 @@ function calculateStats(
       totalDaysWithGoal++;
     });
 
-    const todayStr = formatDateString(today);
-    const todayValue = dateValues.get(todayStr) || 0;
     currentGoalStreak = currentStreak;
-
     longestGoalStreak = maxStreak;
     consistencyScore =
       totalDaysWithGoal > 0
@@ -140,36 +195,52 @@ function calculateStats(
 
   return {
     totalTracked,
-    trackedThisYear,
-    trackedThisMonth: trackedLast30Days,
-    trackedThisWeek: trackedLast7Days,
-    averageOverall,
-    averageThisYear,
-    averageLast30Days,
-    averageLast7Days,
+    averagePerDay,
     currentGoalStreak,
     longestGoalStreak,
     missedGoalDays,
     consistencyScore,
-    currentYear: today.getFullYear(),
   };
 }
 
-export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
+export async function clientLoader({
+  params,
+  request,
+}: ClientLoaderFunctionArgs) {
   const trackerId = params.trackerId;
   if (!trackerId) {
     throw new Response("Tracker ID is required", { status: 400 });
   }
+
+  const url = new URL(request.url);
+  const fromParam = url.searchParams.get("from");
+  const toParam = url.searchParams.get("to");
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const { selectedValue, showCustom, fromDate, toDate } = getSelectedPeriod(
+    fromParam,
+    toParam,
+    today
+  );
 
   try {
     const tracker = await getTrackerById(trackerId);
     if (!tracker) {
       throw new Response("Tracker not found", { status: 404 });
     }
-    const entries = await getEntryHistory(trackerId);
-    const stats = calculateStats(entries, tracker.goal);
+    const allEntries = await getEntryHistory(trackerId);
 
-    return { tracker, entries, stats };
+    const entries = allEntries.filter((entry) => {
+      const entryDate = new Date(entry.date);
+      entryDate.setHours(0, 0, 0, 0);
+      return entryDate >= fromDate && entryDate <= toDate;
+    });
+
+    const stats = calculateStats(entries, fromDate, toDate, tracker.goal);
+
+    return { tracker, entries, stats, selectedValue, showCustom };
   } catch (error) {
     throw new Response("Failed to load tracker", { status: 500 });
   }
@@ -187,8 +258,10 @@ export function meta() {
 }
 
 export default function TrackerChartsPage() {
-  const { tracker, entries, stats } = useLoaderData<typeof clientLoader>();
+  const { tracker, entries, stats, selectedValue, showCustom } =
+    useLoaderData<typeof clientLoader>();
   const revalidator = useRevalidator();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleDataChange = () => {
@@ -222,12 +295,40 @@ export default function TrackerChartsPage() {
 
   const hasGoal = tracker.goal && tracker.goal > 0;
 
+  const handleDateRangeChange = (value: string) => {
+    if (value === "custom") return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const to = formatDateString(today);
+
+    const from = calculateDateFromPeriod(value as DateRangeOption, today);
+    const fromStr = formatDateString(from);
+
+    navigate(`?from=${fromStr}&to=${to}`);
+  };
+
   return (
     <div className="grid gap-4">
+      <div className="flex justify-end">
+        <Select value={selectedValue} onValueChange={handleDateRangeChange}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="1M">1M</SelectItem>
+            <SelectItem value="3M">3M</SelectItem>
+            <SelectItem value="YTD">YTD</SelectItem>
+            <SelectItem value="1Y">1Y</SelectItem>
+            {showCustom && <SelectItem value="custom">Custom</SelectItem>}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <Card>
           <CardHeader>
-            <CardDescription>Total tracked</CardDescription>
+            <CardDescription>Total</CardDescription>
             <CardTitle className="text-2xl">
               {formatValue(stats.totalTracked)}
             </CardTitle>
@@ -235,25 +336,9 @@ export default function TrackerChartsPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardDescription>Tracked this year</CardDescription>
+            <CardDescription>Average</CardDescription>
             <CardTitle className="text-2xl">
-              {formatValue(stats.trackedThisYear)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Tracked this month</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatValue(stats.trackedThisMonth)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Tracked this week</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatValue(stats.trackedThisWeek)}
+              {formatValue(stats.averagePerDay)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -266,41 +351,6 @@ export default function TrackerChartsPage() {
       />
 
       <TrackerTotalHalfYearChart tracker={tracker} entries={entries} />
-
-      <div className="grid grid-cols-2 gap-2">
-        <Card>
-          <CardHeader>
-            <CardDescription>Average</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatValue(stats.averageOverall)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>{stats.currentYear} average</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatValue(stats.averageThisYear)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Last 30 days average</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatValue(stats.averageLast30Days)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Last 7 days average</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatValue(stats.averageLast7Days)}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
 
       <TrackerAverageHalfYearChart tracker={tracker} entries={entries} />
 
