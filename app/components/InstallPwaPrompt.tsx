@@ -1,9 +1,8 @@
-import { Download, Share, X } from "lucide-react";
+import { Download, Share } from "lucide-react";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
@@ -34,7 +33,7 @@ export function InstallPwaPrompt() {
   // iOS: Show card if iOS, not in standalone mode, and not dismissed
   const shouldShowIOSCard = isIOS && !isStandalone && !isIOSDismissed;
 
-  // Chrome/Edge: Show card if prompt available and not dismissed
+  // Non-iOS: Show card if prompt available and not dismissed
   const shouldShowChromeCard = !isDismissed && deferredPrompt;
 
   if (!shouldShowIOSCard && !shouldShowChromeCard) {
@@ -59,18 +58,8 @@ export function InstallPwaPrompt() {
 
   return (
     <>
-      <Card className="mx-4 mb-4">
+      <Card>
         <CardHeader>
-          <CardAction>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleDismiss}
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </CardAction>
           <CardTitle>Install AnythingTracker</CardTitle>
           <CardDescription>
             Install this app on your device for a better experience and quick
@@ -78,10 +67,20 @@ export function InstallPwaPrompt() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleInstallClick} size="sm" className="w-full">
-            <Download className="h-4 w-4 mr-2" />
-            Install App
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Button onClick={handleInstallClick} size="sm" className="w-full">
+              <Download className="h-4 w-4 mr-2" />
+              Install App
+            </Button>
+            <Button
+              onClick={handleDismiss}
+              variant="outline"
+              size="sm"
+              className="w-full"
+            >
+              Dismiss
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
