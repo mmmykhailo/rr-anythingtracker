@@ -1,9 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import type { Tracker } from "./trackers";
+import { useState, useCallback } from "react";
 import {
-  saveTracker,
-  updateTracker,
-  deleteTracker,
   saveEntry,
   deleteEntry,
   getEntryHistory,
@@ -11,102 +7,9 @@ import {
   createEntry,
   getTotalValueForDate,
   getDB,
-  initDB,
-} from "./db";
-import { formatDateString } from "./dates";
-import { debouncedDataChange } from "./data-change-events";
-
-// Hook to initialize the database
-export function useDatabase() {
-  const [isInitialized, setIsInitialized] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function init() {
-      try {
-        await initDB();
-        setIsInitialized(true);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to initialize database"
-        );
-      }
-    }
-
-    init();
-  }, []);
-
-  return { isInitialized, error };
-}
-
-// Hook for tracker mutations
-export function useTrackerMutations() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const createTracker = useCallback(
-    async (tracker: Omit<Tracker, "id" | "values">) => {
-      try {
-        setLoading(true);
-        setError(null);
-        const newTracker = await saveTracker(tracker);
-        debouncedDataChange.dispatch("tracker_created", {
-          trackerId: newTracker.id,
-        });
-        return newTracker;
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "Failed to create tracker"
-        );
-        throw err;
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
-
-  const modifyTracker = useCallback(async (tracker: Tracker) => {
-    try {
-      setLoading(true);
-      setError(null);
-      await updateTracker(tracker);
-      debouncedDataChange.dispatch("tracker_updated", {
-        trackerId: tracker.id,
-      });
-      return tracker;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update tracker");
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const removeTracker = useCallback(async (id: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      await deleteTracker(id);
-      debouncedDataChange.dispatch("tracker_deleted", {
-        trackerId: id,
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete tracker");
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  return {
-    loading,
-    error,
-    createTracker,
-    modifyTracker,
-    removeTracker,
-  };
-}
+} from "../db";
+import { formatDateString } from "../dates";
+import { debouncedDataChange } from "../data-change-events";
 
 // Hook to manage entries for a tracker
 export function useTrackerEntries(trackerId: string) {
@@ -274,61 +177,3 @@ export function useTrackerEntries(trackerId: string) {
     removeEntryById,
   };
 }
-
-// Hook for form state management
-export function useFormState<T>(initialState: T) {
-  const [state, setState] = useState<T>(initialState);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const updateField = useCallback(
-    (field: keyof T, value: T[keyof T]) => {
-      setState((prev) => ({ ...prev, [field]: value }));
-      // Clear error when field is updated
-      if (errors[field as string]) {
-        setErrors((prev) => {
-          const newErrors = { ...prev };
-          delete newErrors[field as string];
-          return newErrors;
-        });
-      }
-    },
-    [errors]
-  );
-
-  const setFieldError = useCallback((field: keyof T, error: string) => {
-    setErrors((prev) => ({ ...prev, [field as string]: error }));
-  }, []);
-
-  const clearErrors = useCallback(() => {
-    setErrors({});
-  }, []);
-
-  const reset = useCallback(() => {
-    setState(initialState);
-    setErrors({});
-  }, [initialState]);
-
-  return {
-    state,
-    errors,
-    updateField,
-    setFieldError,
-    clearErrors,
-    reset,
-    setState,
-  };
-}
-
-export const useStateWithDelayedReset = <T>(value: T, delay = 3000) => {
-  const [transient, setTransient] = useState(value);
-
-  useEffect(() => {
-    if (value !== transient) {
-      setTransient(value);
-      const timer = setTimeout(() => setTransient(null as T), delay);
-      return () => clearTimeout(timer);
-    }
-  }, [value]);
-
-  return transient;
-};
