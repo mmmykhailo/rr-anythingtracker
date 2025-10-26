@@ -136,6 +136,10 @@ export function TrackerContributionGraph({
 }: TrackerContributionGraphProps) {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const scrollableContentRef = useRef<HTMLDivElement>(null);
+  const [touchDragMode, setTouchDragMode] = useState(false);
+  const [hoveredDayKey, setHoveredDayKey] = useState<string | null>(null);
+  const touchTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const { weeks, yearNumberStr } = useMemo(() => {
     const yearStart = startOfYear(new Date(selectedYear, 0));
@@ -210,6 +214,86 @@ export function TrackerContributionGraph({
     }
   }, [selectedYear]);
 
+  // Touch drag tooltip handling
+  useEffect(() => {
+    const scrollArea = scrollAreaRef.current;
+    if (!scrollArea) return;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      const touch = e.touches[0];
+
+      // Start a timer for long press detection
+      touchTimerRef.current = setTimeout(() => {
+        setTouchDragMode(true);
+        // Vibrate if supported
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+
+        // Show tooltip for current position
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        const dayButton = element?.closest('[data-date]') as HTMLElement;
+        if (dayButton) {
+          const dateKey = dayButton.getAttribute('data-date');
+          if (dateKey) {
+            setHoveredDayKey(dateKey);
+          }
+        }
+      }, 1000);
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (touchDragMode) {
+        // Prevent scrolling when in tooltip drag mode
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        const dayButton = element?.closest('[data-date]') as HTMLElement;
+
+        if (dayButton) {
+          const dateKey = dayButton.getAttribute('data-date');
+          if (dateKey && dateKey !== hoveredDayKey) {
+            setHoveredDayKey(dateKey);
+          }
+        }
+      } else {
+        // Cancel the timer if user starts scrolling before long press completes
+        if (touchTimerRef.current) {
+          clearTimeout(touchTimerRef.current);
+          touchTimerRef.current = null;
+        }
+      }
+    };
+
+    const handleTouchEnd = () => {
+      // Clear timer if touch ends before long press
+      if (touchTimerRef.current) {
+        clearTimeout(touchTimerRef.current);
+        touchTimerRef.current = null;
+      }
+
+      // Exit tooltip drag mode
+      setTouchDragMode(false);
+      setHoveredDayKey(null);
+    };
+
+    scrollArea.addEventListener('touchstart', handleTouchStart, { passive: true });
+    scrollArea.addEventListener('touchmove', handleTouchMove, { passive: false });
+    scrollArea.addEventListener('touchend', handleTouchEnd);
+    scrollArea.addEventListener('touchcancel', handleTouchEnd);
+
+    return () => {
+      if (touchTimerRef.current) {
+        clearTimeout(touchTimerRef.current);
+      }
+      scrollArea.removeEventListener('touchstart', handleTouchStart);
+      scrollArea.removeEventListener('touchmove', handleTouchMove);
+      scrollArea.removeEventListener('touchend', handleTouchEnd);
+      scrollArea.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [touchDragMode, hoveredDayKey]);
+
   return (
     <Card className={cn(className, "select-none")}>
       <CardHeader>
@@ -237,11 +321,10 @@ export function TrackerContributionGraph({
         </div>
       </CardHeader>
       <TooltipProvider
-        disableHoverableContent
-        delayDuration={0}
+        delayDuration={100}
         skipDelayDuration={0}
       >
-        <ScrollArea className="-mb-3 max-w-full">
+        <ScrollArea ref={scrollAreaRef} className="-mb-3 max-w-full">
           <div ref={scrollableContentRef} className="flex gap-1 p-1 pb-3 px-6">
             {weeks.map((week) => (
               <div key={week[0].toString()} className="flex flex-col gap-1">
@@ -250,7 +333,14 @@ export function TrackerContributionGraph({
                   const dailyValue = dailyValues.get(dateKey) || 0;
 
                   return (
-                    <Tooltip key={dateKey}>
+                    <Tooltip
+                      key={dateKey}
+                      open={
+                        touchDragMode
+                          ? hoveredDayKey === dateKey
+                          : undefined
+                      }
+                    >
                       <TooltipTrigger asChild>
                         <button
                           type="button"
@@ -292,7 +382,7 @@ export function TrackerContributionGraph({
         </ScrollArea>
       </TooltipProvider>
 
-      <TooltipProvider disableHoverableContent skipDelayDuration={0}>
+      <TooltipProvider delayDuration={100} skipDelayDuration={0}>
         <div className="px-6 flex items-center gap-2 text-muted-foreground text-sm">
           <span>Less</span>
           <div className="flex flex-row-reverse gap-1">
