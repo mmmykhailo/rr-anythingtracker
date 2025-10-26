@@ -385,7 +385,9 @@ export default function SettingsPage() {
                 your data.
               </p>
               <div className="pt-2 border-t mt-3">
-                <span className="text-xs font-medium">Version {APP_VERSION}</span>
+                <span className="text-xs font-medium">
+                  Version {APP_VERSION}
+                </span>
               </div>
             </div>
           </CardContent>
@@ -400,10 +402,14 @@ export default function SettingsPage() {
             <div className="space-y-4">
               {CHANGELOG.length > 0 ? (
                 CHANGELOG.slice(0, 5).map((entry) => (
-                  <div key={entry.version} className="border-b last:border-b-0 pb-3 last:pb-0">
+                  <div key={entry.version}>
                     <div className="flex items-baseline gap-2 mb-2">
-                      <span className="font-semibold text-sm">v{entry.version}</span>
-                      <span className="text-xs text-muted-foreground">{entry.date}</span>
+                      <span className="font-semibold text-sm">
+                        v{entry.version}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {entry.date}
+                      </span>
                     </div>
                     <div className="text-sm text-muted-foreground whitespace-pre-line">
                       {entry.changes}
@@ -411,7 +417,9 @@ export default function SettingsPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">No changelog available.</p>
+                <p className="text-sm text-muted-foreground">
+                  No changelog available.
+                </p>
               )}
             </div>
           </CardContent>
