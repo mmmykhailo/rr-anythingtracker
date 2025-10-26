@@ -12,7 +12,6 @@ import { Link, redirect, useLoaderData } from "react-router";
 import { Button } from "~/components/ui/button";
 import { Separator } from "~/components/ui/separator";
 import { formatDateForDisplay, getDaysArray, isDateToday } from "~/lib/dates";
-import { useDatabase } from "~/lib/hooks";
 import { getAllTrackers } from "~/lib/db";
 import { formatStoredValue } from "~/lib/number-conversions";
 import { SyncButton } from "~/components/SyncButton";
@@ -20,6 +19,7 @@ import { isOnboardingCompleted } from "~/lib/github-gist-sync";
 import { getShowHiddenTrackers } from "~/lib/user-settings";
 import clsx from "clsx";
 import type { Tracker } from "~/lib/trackers";
+import { InstallPwaPrompt } from "~/components/InstallPwaPrompt";
 
 const DAYS_TO_SHOW = 4;
 
@@ -188,6 +188,7 @@ export default function Home() {
           </Button>
         </div>
       </div>
+      <InstallPwaPrompt />
       <div className="flex flex-col py-6">
         <div className="px-2 w-full flex items-center pb-2">
           <div

@@ -10,6 +10,7 @@ import { useEffect } from "react";
 import type { Route } from "./+types/root";
 import { DevUtils } from "~/components/dev-utils";
 import { SyncProvider } from "~/components/SyncProvider";
+import { usePwaInstall } from "~/lib/hooks/usePwaInstall";
 
 import "./app.css";
 
@@ -64,6 +65,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  usePwaInstall();
+
   useEffect(() => {
     // Register service worker for PWA functionality
     if ("serviceWorker" in navigator && import.meta.env.PROD) {
