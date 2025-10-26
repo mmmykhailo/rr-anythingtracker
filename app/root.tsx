@@ -6,12 +6,12 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
-import { useEffect, useRef } from "react";
-
+import { useEffect } from "react";
 import type { Route } from "./+types/root";
-import "./app.css";
 import { DevUtils } from "~/components/dev-utils";
 import { SyncProvider } from "~/components/SyncProvider";
+
+import "./app.css";
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -30,29 +30,6 @@ export const links: Route.LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const rootRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-
-    // Safari bug: env(safe-area-inset-*) = 0 until first layout
-    if (isIOS && rootRef.current) {
-      const el = rootRef.current;
-
-      el.style.visibility = "hidden";
-
-      const handlePaint = () => {
-        void el.offsetHeight; // force reflow
-        document.documentElement.style.height = "100.1vh";
-        void document.documentElement.offsetHeight; // force layout calc
-        document.documentElement.style.height = "";
-        el.style.visibility = "visible";
-      };
-
-      requestAnimationFrame(() => handlePaint());
-    }
-  }, []);
-
   return (
     <html lang="en">
       <head>
@@ -77,7 +54,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body className="dark bg-background min-h-full">
         <SyncProvider>
-          <div ref={rootRef} className="root">
+          <div className="root">
             <div className="max-w-md mx-auto px-4 pb-4">{children}</div>
           </div>
           <DevUtils />
