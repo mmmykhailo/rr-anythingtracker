@@ -114,7 +114,7 @@ export function TrackerCumulativeChart({
   const avgDailyIncrease = finalValue / totalDays;
 
   return (
-    <Card>
+    <Card className="select-none">
       <CardHeader>
         <CardTitle>Cumulative Total</CardTitle>
         <CardDescription>

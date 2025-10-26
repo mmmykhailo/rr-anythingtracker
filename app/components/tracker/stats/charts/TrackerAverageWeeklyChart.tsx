@@ -113,7 +113,7 @@ export function TrackerAverageWeeklyChart({
   const hasData = chartData.some((d) => d.value > 0);
 
   return (
-    <Card>
+    <Card className="select-none">
       <CardHeader>
         <CardTitle>Weekly Average</CardTitle>
         <CardDescription>

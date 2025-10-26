@@ -100,7 +100,7 @@ export function TrackerTotalWeeklyChart({
   const hasData = chartData.some((d) => d.value > 0);
 
   return (
-    <Card>
+    <Card className="select-none">
       <CardHeader>
         <CardTitle>Weekly Total</CardTitle>
         <CardDescription>

@@ -211,7 +211,7 @@ export function TrackerContributionGraph({
   }, [selectedYear]);
 
   return (
-    <Card className={className}>
+    <Card className={cn(className, "select-none")}>
       <CardHeader>
         <div className="flex justify-between">
           <div className="flex flex-col gap-1.5">
@@ -251,10 +251,11 @@ export function TrackerContributionGraph({
 
                   return (
                     <Tooltip key={dateKey}>
-                      <TooltipTrigger>
-                        <span
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
                           className={cn(
-                            "block h-3 w-3 rounded-xs hover:ring-2 hover:ring-ring",
+                            "block h-3 w-3 rounded-xs hover:ring-2 hover:ring-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                             getContributionColorClassName(
                               dailyValue,
                               tracker.goal,
@@ -262,6 +263,11 @@ export function TrackerContributionGraph({
                             )
                           )}
                           data-date={dateKey}
+                          aria-label={`${formatDate(day, "MMM d, yyyy")}: ${
+                            dailyValue > 0
+                              ? formatValue(dailyValue)
+                              : "No activity"
+                          }`}
                         />
                       </TooltipTrigger>
                       <TooltipContent className="pointer-events-none">
@@ -274,14 +280,6 @@ export function TrackerContributionGraph({
                               ? formatValue(dailyValue)
                               : "No activity"}
                           </p>
-                          {tracker.goal &&
-                            tracker.goal > 0 &&
-                            dailyValue > 0 && (
-                              <p className="text-xs mt-1 text-muted-foreground">
-                                {((dailyValue / tracker.goal) * 100).toFixed(0)}
-                                % of goal
-                              </p>
-                            )}
                         </div>
                       </TooltipContent>
                     </Tooltip>
@@ -301,39 +299,42 @@ export function TrackerContributionGraph({
             {(tracker.goal && tracker.goal > 0
               ? colorClassNamesGoal
               : colorClassNamesNoGoal
-            ).map((className, i) => (
-              <Tooltip key={i}>
-                <TooltipTrigger>
-                  <span
-                    className={cn(
-                      "block h-3 w-3 rounded-xs hover:ring-2 hover:ring-ring",
-                      className
-                    )}
-                  />
-                </TooltipTrigger>
-                <TooltipContent className="pointer-events-none">
-                  <div className="text-sm">
-                    {tracker.goal && tracker.goal > 0 ? (
-                      <>
-                        {i === 0 && "Goal met"}
-                        {i === 1 && "75%+ of goal"}
-                        {i === 2 && "50%+ of goal"}
-                        {i === 3 && "Some progress"}
-                        {i === 4 && "No activity"}
-                      </>
-                    ) : (
-                      <>
-                        {i === 0 && "High activity"}
-                        {i === 1 && "Medium activity"}
-                        {i === 2 && "Low activity"}
-                        {i === 3 && "Minimal activity"}
-                        {i === 4 && "No activity"}
-                      </>
-                    )}
-                  </div>
-                </TooltipContent>
-              </Tooltip>
-            ))}
+            ).map((className, i) => {
+              const hasGoal = tracker.goal && tracker.goal > 0;
+              const labels = hasGoal
+                ? [
+                    "Goal met",
+                    "75%+ of goal",
+                    "50%+ of goal",
+                    "Some progress",
+                    "No activity",
+                  ]
+                : [
+                    "High activity",
+                    "Medium activity",
+                    "Low activity",
+                    "Minimal activity",
+                    "No activity",
+                  ];
+
+              return (
+                <Tooltip key={i}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "block h-3 w-3 rounded-xs hover:ring-2 hover:ring-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                        className
+                      )}
+                      aria-label={labels[i]}
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent className="pointer-events-none">
+                    <div className="text-sm">{labels[i]}</div>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
           </div>
           <span>More</span>
         </div>
