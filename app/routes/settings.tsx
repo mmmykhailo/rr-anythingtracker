@@ -35,6 +35,7 @@ import {
   getEncryptionEnabled,
 } from "~/lib/user-settings";
 import { useStateWithDelayedReset } from "~/lib/hooks";
+import { APP_VERSION, CHANGELOG } from "~/lib/version";
 
 export async function clientAction({ request }: ClientActionFunctionArgs) {
   const formData = await request.formData();
@@ -383,6 +384,35 @@ export default function SettingsPage() {
                 your browser. No servers, no tracking, complete ownership of
                 your data.
               </p>
+              <div className="pt-2 border-t mt-3">
+                <span className="text-xs font-medium">Version {APP_VERSION}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Changelog</CardTitle>
+            <CardDescription>Recent updates and changes</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {CHANGELOG.length > 0 ? (
+                CHANGELOG.slice(0, 5).map((entry) => (
+                  <div key={entry.version} className="border-b last:border-b-0 pb-3 last:pb-0">
+                    <div className="flex items-baseline gap-2 mb-2">
+                      <span className="font-semibold text-sm">v{entry.version}</span>
+                      <span className="text-xs text-muted-foreground">{entry.date}</span>
+                    </div>
+                    <div className="text-sm text-muted-foreground whitespace-pre-line">
+                      {entry.changes}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No changelog available.</p>
+              )}
             </div>
           </CardContent>
         </Card>

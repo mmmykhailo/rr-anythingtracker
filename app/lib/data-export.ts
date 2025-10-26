@@ -8,6 +8,7 @@ import {
   setLastChangeDate,
   getDB,
 } from "./db";
+import { APP_VERSION } from "./version";
 
 export interface ExportData {
   version: string;
@@ -47,7 +48,7 @@ export async function exportData(): Promise<ExportData> {
   const allTags = await db.getAll("entry_tags");
 
   const exportData: ExportData = {
-    version: "1.0.0",
+    version: APP_VERSION,
     exportDate: new Date().toISOString(),
     lastChangeDate: lastChangeDate?.toISOString(),
     trackers: await Promise.all(
