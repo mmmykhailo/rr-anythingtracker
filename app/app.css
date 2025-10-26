@@ -20,14 +20,6 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-@media (display-mode: standalone) {
-  body {
-    padding-top: max(
-      env(safe-area-inset-top),
-      20px
-    ); /* Fallback if still 0px */
-  }
-}
 .root {
   isolation: isolate;
 }
