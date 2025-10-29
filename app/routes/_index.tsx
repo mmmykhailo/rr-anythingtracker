@@ -1,5 +1,6 @@
 import { addDays, format } from "date-fns";
 import {
+  BarChart3,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -181,6 +182,11 @@ export default function Home() {
           <Button asChild variant="ghost" size="icon">
             <Link to="/settings" prefetch="viewport">
               <Settings className="h-4 w-4" />
+            </Link>
+          </Button>
+          <Button asChild variant="ghost" size="icon">
+            <Link to="/monthly-recap" prefetch="viewport">
+              <BarChart3 className="h-4 w-4" />
             </Link>
           </Button>
           <SyncButton />
