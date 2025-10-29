@@ -42,6 +42,9 @@ export default function TrackerPageLayout() {
           </Button>
           <span className="font-medium">{tracker.title}</span>
         </div>
+        <Button asChild variant="secondary">
+          <Link to={`/t/${trackerId}/log-entry`}>Log new entry</Link>
+        </Button>
       </div>
       <TabsNavigation
         className="mb-4"
