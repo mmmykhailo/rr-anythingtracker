@@ -157,16 +157,30 @@ export function EntryInput({
             </span>
           </div>
 
-          <Input
-            id="value"
-            type="number"
-            step={getInputStep(tracker.type)}
-            value={formatForInput(inputValue, tracker.type)}
-            onChange={(e) =>
-              setInputValue(parseInputToStored(e.target.value, tracker.type))
-            }
-            placeholder="Enter value"
-          />
+          <div className="relative">
+            <Input
+              id="value"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*"
+              step={getInputStep(tracker.type)}
+              value={formatForInput(inputValue, tracker.type)}
+              onChange={(e) =>
+                setInputValue(parseInputToStored(e.target.value, tracker.type))
+              }
+              placeholder="Enter value"
+            />
+            {!!inputValue && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="absolute inset-0 left-auto rounded-l-none"
+                onClick={() => setInputValue(null)}
+              >
+                <X />
+              </Button>
+            )}
+          </div>
 
           {!!quickAddValues && (
             <div className="flex gap-4 overflow-auto -mb-2 pb-2 -mx-4 w-[calc(100%+2rem)] px-4">
