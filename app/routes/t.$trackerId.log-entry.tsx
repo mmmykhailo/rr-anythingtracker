@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   useLoaderData,
   useSubmit,
@@ -16,9 +17,14 @@ import {
   getTotalValueForDate,
   getDB,
   deleteEntryById,
+  getEntryHistory,
 } from "~/lib/db";
 import { debouncedDataChange } from "~/lib/data-change-events";
-import { TrackerHeader, EntryInput } from "~/components/tracker";
+import {
+  TrackerHeader,
+  EntryInput,
+  TrackerHistory,
+} from "~/components/tracker";
 
 export async function clientLoader({
   params,
@@ -41,8 +47,12 @@ export async function clientLoader({
 
     const mostUsedTags = await getMostUsedTags(trackerId, 5);
     const currentValue = await getTotalValueForDate(trackerId, selectedDate);
+    const allHistory = await getEntryHistory(trackerId);
 
-    return { tracker, currentValue, selectedDate, mostUsedTags };
+    // Filter history to only entries for the selected date
+    const history = allHistory.filter((entry) => entry.date === selectedDate);
+
+    return { tracker, currentValue, selectedDate, mostUsedTags, history };
   } catch (error) {
     throw new Response("Failed to load tracker", { status: 500 });
   }
@@ -95,6 +105,12 @@ export async function clientAction({
       }
 
       debouncedDataChange.dispatch("entry_updated", { trackerId, date, value });
+    } else if (intent === "deleteEntry") {
+      const entryId = formData.get("entryId") as string;
+      if (entryId) {
+        await deleteEntryById(entryId);
+        debouncedDataChange.dispatch("entry_deleted", { trackerId });
+      }
     }
 
     return { success: true };
@@ -124,8 +140,10 @@ export default function LogEntryPage() {
     mostUsedTags,
     currentValue: loaderCurrentValue,
     selectedDate,
+    history,
   } = useLoaderData<typeof clientLoader>();
 
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
   const isLoading = navigation.state !== "idle";
 
   const handleDateChange = (newDate: string) => {
@@ -156,6 +174,27 @@ export default function LogEntryPage() {
     submit(formData, { method: "post" });
   };
 
+  const handleDeleteEntry = async (entryId: string) => {
+    if (!confirm("Are you sure you want to delete this entry?")) {
+      return;
+    }
+
+    setDeletingEntryId(entryId);
+
+    const formData = new FormData();
+    formData.append("intent", "deleteEntry");
+    formData.append("entryId", entryId);
+
+    submit(formData, { method: "post" });
+  };
+
+  // Clear deletingEntryId when navigation is complete
+  useEffect(() => {
+    if (navigation.state === "idle") {
+      setDeletingEntryId(null);
+    }
+  }, [navigation.state]);
+
   if (!tracker) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -165,7 +204,7 @@ export default function LogEntryPage() {
   }
 
   return (
-    <div>
+    <div className="grid gap-8">
       <TrackerHeader
         trackerTitle={tracker.title}
         selectedDate={selectedDate}
@@ -181,6 +220,16 @@ export default function LogEntryPage() {
         mostUsedTags={mostUsedTags}
         entryLoading={isLoading}
       />
+
+      {!!history.length && (
+        <TrackerHistory
+          history={history}
+          tracker={tracker}
+          onDeleteEntry={handleDeleteEntry}
+          deletingEntryId={deletingEntryId}
+          entryLoading={isLoading}
+        />
+      )}
     </div>
   );
 }

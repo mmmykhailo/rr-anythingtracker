@@ -71,7 +71,7 @@ export function EntryInput({
   const isToday = selectedDate === formatDateString(new Date());
 
   return (
-    <div className="flex flex-col py-6 gap-4">
+    <div className="flex flex-col gap-4">
       <div className="text-sm text-gray-600 dark:text-gray-400">
         {isToday
           ? "Today"
