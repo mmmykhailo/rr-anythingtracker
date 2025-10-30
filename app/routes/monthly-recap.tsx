@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Link, useLoaderData } from "react-router";
+import { Link, useLoaderData, useNavigate } from "react-router";
+import type { Route } from "./+types/monthly-recap";
 import html2canvas from "html2canvas-pro";
 import { getAllTrackers, getEntryHistory } from "~/lib/db";
 import type { Tracker } from "~/lib/trackers";
@@ -27,23 +28,6 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "~/components/ui/empty";
-
-export async function clientLoader() {
-  const trackers = await getAllTrackers();
-  return { trackers };
-}
-
-export function meta() {
-  return [
-    { title: "Monthly Recap - AnythingTracker" },
-    {
-      name: "description",
-      content:
-        "View your monthly tracking statistics, achievements, and progress. Generate beautiful recap images to share your accomplishments.",
-    },
-    { name: "viewport", content: "width=device-width, initial-scale=1" },
-  ];
-}
 
 type Entry = {
   id: string;
@@ -125,6 +109,91 @@ function calculateStreaks(entries: Entry[]): {
   return { longestStreak, currentStreak: currentStreakCount };
 }
 
+export async function clientLoader({ request }: Route.ClientLoaderArgs) {
+  const url = new URL(request.url);
+  const now = new Date();
+
+  // Get year and month from query params, default to current
+  const year = parseInt(
+    url.searchParams.get("year") || String(now.getFullYear())
+  );
+  const month = parseInt(
+    url.searchParams.get("month") ?? String(now.getMonth())
+  );
+
+  const trackers = await getAllTrackers();
+
+  const { start, end } = getMonthDateRange(year, month);
+
+  // Calculate total days in the month
+  const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const stats: MonthlyStats[] = [];
+
+  for (const tracker of trackers) {
+    // Get all entries for the tracker
+    const allEntries = await getEntryHistory(tracker.id);
+
+    // Filter entries by date range
+    const entries = allEntries.filter(
+      (entry) => entry.date >= start && entry.date <= end
+    );
+
+    if (entries.length === 0) continue;
+
+    const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+    const daysTracked = new Set(entries.map((e) => e.date)).size;
+    const daysMissed = totalDaysInMonth - daysTracked;
+    const average = total / daysTracked;
+
+    // Find best day
+    const dailyTotals = entries.reduce((acc, entry) => {
+      acc[entry.date] = (acc[entry.date] || 0) + entry.value;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const bestDay = Object.entries(dailyTotals).reduce(
+      (best, [date, value]) => {
+        if (!best || value > best.value) {
+          return { date, value };
+        }
+        return best;
+      },
+      null as { date: string; value: number } | null
+    );
+
+    stats.push({
+      tracker,
+      total,
+      daysTracked,
+      daysMissed,
+      average,
+      bestDay,
+      entries,
+    });
+  }
+
+  return {
+    trackers,
+    monthlyStats: stats,
+    selectedYear: year,
+    selectedMonth: month,
+    hasGenerated: true,
+  };
+}
+
+export function meta() {
+  return [
+    { title: "Monthly Recap - AnythingTracker" },
+    {
+      name: "description",
+      content:
+        "View your monthly tracking statistics, achievements, and progress. Generate beautiful recap images to share your accomplishments.",
+    },
+    { name: "viewport", content: "width=device-width, initial-scale=1" },
+  ];
+}
+
 const MONTH_NAMES = [
   "January",
   "February",
@@ -150,81 +219,25 @@ const GRADIENT_CLASSES = [
 ];
 
 export default function MonthlyRecap() {
-  const { trackers } = useLoaderData<typeof clientLoader>();
+  const { trackers, monthlyStats, selectedYear, selectedMonth, hasGenerated } =
+    useLoaderData<typeof clientLoader>();
+  const navigate = useNavigate();
 
   const now = new Date();
-  const [selectedYear, setSelectedYear] = useState(now.getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
-  const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
-  const [loading, setLoading] = useState(false);
   const [generatingCardId, setGeneratingCardId] = useState<string | null>(null);
   const [canShare, setCanShare] = useState(false);
-  const [hasGenerated, setHasGenerated] = useState(false);
 
   useEffect(() => {
     // Check if Web Share API is available
     setCanShare(typeof navigator !== "undefined" && "share" in navigator);
   }, []);
 
-  const loadMonthlyData = async () => {
-    setLoading(true);
-    const { start, end } = getMonthDateRange(selectedYear, selectedMonth);
+  const handleMonthChange = (month: string) => {
+    navigate(`/monthly-recap?year=${selectedYear}&month=${month}`);
+  };
 
-    // Calculate total days in the month
-    const totalDaysInMonth = new Date(
-      selectedYear,
-      selectedMonth + 1,
-      0
-    ).getDate();
-
-    const stats: MonthlyStats[] = [];
-
-    for (const tracker of trackers) {
-      // Get all entries for the tracker
-      const allEntries = await getEntryHistory(tracker.id);
-
-      // Filter entries by date range
-      const entries = allEntries.filter(
-        (entry) => entry.date >= start && entry.date <= end
-      );
-
-      if (entries.length === 0) continue;
-
-      const total = entries.reduce((sum, entry) => sum + entry.value, 0);
-      const daysTracked = new Set(entries.map((e) => e.date)).size;
-      const daysMissed = totalDaysInMonth - daysTracked;
-      const average = total / daysTracked;
-
-      // Find best day
-      const dailyTotals = entries.reduce((acc, entry) => {
-        acc[entry.date] = (acc[entry.date] || 0) + entry.value;
-        return acc;
-      }, {} as Record<string, number>);
-
-      const bestDay = Object.entries(dailyTotals).reduce(
-        (best, [date, value]) => {
-          if (!best || value > best.value) {
-            return { date, value };
-          }
-          return best;
-        },
-        null as { date: string; value: number } | null
-      );
-
-      stats.push({
-        tracker,
-        total,
-        daysTracked,
-        daysMissed,
-        average,
-        bestDay,
-        entries,
-      });
-    }
-
-    setMonthlyStats(stats);
-    setHasGenerated(true);
-    setLoading(false);
+  const handleYearChange = (year: string) => {
+    navigate(`/monthly-recap?year=${year}&month=${selectedMonth}`);
   };
 
   const handleDownloadCard = async (cardId: string, trackerTitle: string) => {
@@ -346,7 +359,7 @@ export default function MonthlyRecap() {
             <div className="flex-1 flex gap-2">
               <Select
                 value={selectedMonth.toString()}
-                onValueChange={(value) => setSelectedMonth(Number(value))}
+                onValueChange={handleMonthChange}
               >
                 <SelectTrigger className="flex-1">
                   <SelectValue />
@@ -361,7 +374,7 @@ export default function MonthlyRecap() {
               </Select>
               <Select
                 value={selectedYear.toString()}
-                onValueChange={(value) => setSelectedYear(Number(value))}
+                onValueChange={handleYearChange}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -379,13 +392,6 @@ export default function MonthlyRecap() {
               </Select>
             </div>
           </div>
-          <Button
-            onClick={loadMonthlyData}
-            className="w-full mt-3 bg-white text-black hover:bg-zinc-200"
-            disabled={loading}
-          >
-            {loading ? "Loading..." : "Generate Recap"}
-          </Button>
         </div>
       </div>
 
@@ -532,47 +538,40 @@ export default function MonthlyRecap() {
       )}
 
       {/* Empty State - No data for selected month */}
-      {!loading &&
-        monthlyStats.length === 0 &&
-        trackers.length > 0 &&
-        hasGenerated && (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <CalendarX className="w-6 h-6" />
-              </EmptyMedia>
-              <EmptyTitle>
-                No data for {MONTH_NAMES[selectedMonth]} {selectedYear}
-              </EmptyTitle>
-              <EmptyDescription>
-                There are no tracked entries for the selected month. Try
-                selecting a different month or start tracking to see your recap.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        )}
+      {monthlyStats.length === 0 && trackers.length > 0 && hasGenerated && (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CalendarX className="w-6 h-6" />
+            </EmptyMedia>
+            <EmptyTitle>
+              No data for {MONTH_NAMES[selectedMonth]} {selectedYear}
+            </EmptyTitle>
+            <EmptyDescription>
+              There are no tracked entries for the selected month. Try selecting
+              a different month or start tracking to see your recap.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
 
       {/* Empty State - No month selected yet */}
-      {!loading &&
-        monthlyStats.length === 0 &&
-        trackers.length > 0 &&
-        !hasGenerated && (
-          <Empty>
-            <EmptyHeader>
-              <EmptyMedia variant="icon">
-                <Calendar className="w-6 h-6" />
-              </EmptyMedia>
-              <EmptyTitle>Select a month to view your recap</EmptyTitle>
-              <EmptyDescription>
-                Choose a month and year above, then click Generate Recap to see
-                your tracking statistics.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        )}
+      {monthlyStats.length === 0 && trackers.length > 0 && !hasGenerated && (
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <Calendar className="w-6 h-6" />
+            </EmptyMedia>
+            <EmptyTitle>Select a month to view your recap</EmptyTitle>
+            <EmptyDescription>
+              Choose a month and year above to see your tracking statistics.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      )}
 
       {/* Empty State - No trackers */}
-      {!loading && trackers.length === 0 && (
+      {trackers.length === 0 && (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
