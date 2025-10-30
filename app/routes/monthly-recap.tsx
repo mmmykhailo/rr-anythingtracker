@@ -1,18 +1,19 @@
-import { useState, useRef } from 'react';
-import { Link, useLoaderData } from 'react-router';
-import html2canvas from 'html2canvas-pro';
-import { getAllTrackers, getEntryHistory } from '~/lib/db';
-import type { Tracker } from '~/lib/trackers';
-import { formatStoredValue } from '~/lib/number-conversions';
-import { Button } from '~/components/ui/button';
+import { useState, useEffect } from "react";
+import { Link, useLoaderData } from "react-router";
+import html2canvas from "html2canvas-pro";
+import { getAllTrackers, getEntryHistory } from "~/lib/db";
+import type { Tracker } from "~/lib/trackers";
+import { formatStoredValue } from "~/lib/number-conversions";
+import { Button } from "~/components/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '~/components/ui/select';
-import { ChevronLeft, Download, Calendar } from 'lucide-react';
+} from "~/components/ui/select";
+import { ChevronLeft, Download, Calendar, Share2 } from "lucide-react";
+import clsx from "clsx";
 
 export async function clientLoader() {
   const trackers = await getAllTrackers();
@@ -44,6 +45,7 @@ interface MonthlyStats {
   tracker: Tracker;
   total: number;
   daysTracked: number;
+  daysMissed: number;
   average: number;
   bestDay: { date: string; value: number } | null;
   entries: Entry[];
@@ -54,67 +56,112 @@ function getMonthDateRange(year: number, month: number) {
   const end = new Date(year, month + 1, 0); // Last day of month
 
   return {
-    start: start.toISOString().split('T')[0],
-    end: end.toISOString().split('T')[0],
+    start: start.toISOString().split("T")[0],
+    end: end.toISOString().split("T")[0],
   };
 }
 
-function calculateStreak(entries: Entry[]): number {
-  if (entries.length === 0) return 0;
+function calculateStreaks(entries: Entry[]): {
+  longestStreak: number;
+  currentStreak: number;
+} {
+  if (entries.length === 0) return { longestStreak: 0, currentStreak: 0 };
 
-  // Sort entries by date descending
-  const sortedEntries = [...entries].sort((a, b) =>
-    new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
+  // Get unique dates and sort them
+  const uniqueDates = [...new Set(entries.map((e) => e.date))].sort();
 
-  let streak = 0;
-  let currentDate = new Date(sortedEntries[0].date);
+  let longestStreak = 0;
+  let currentStreakCount = 1;
+  let tempStreak = 1;
 
-  for (const entry of sortedEntries) {
-    const entryDate = new Date(entry.date);
+  for (let i = 1; i < uniqueDates.length; i++) {
+    const prevDate = new Date(uniqueDates[i - 1]);
+    const currDate = new Date(uniqueDates[i]);
     const dayDiff = Math.floor(
-      (currentDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24)
+      (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    if (dayDiff === 0 || dayDiff === 1) {
-      streak++;
-      currentDate = entryDate;
+    if (dayDiff === 1) {
+      tempStreak++;
     } else {
-      break;
+      longestStreak = Math.max(longestStreak, tempStreak);
+      tempStreak = 1;
     }
   }
 
-  return streak;
+  longestStreak = Math.max(longestStreak, tempStreak);
+
+  // Calculate current streak (from the most recent date backwards)
+  if (uniqueDates.length > 0) {
+    currentStreakCount = 1;
+    for (let i = uniqueDates.length - 2; i >= 0; i--) {
+      const currDate = new Date(uniqueDates[i + 1]);
+      const prevDate = new Date(uniqueDates[i]);
+      const dayDiff = Math.floor(
+        (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+
+      if (dayDiff === 1) {
+        currentStreakCount++;
+      } else {
+        break;
+      }
+    }
+  }
+
+  return { longestStreak, currentStreak: currentStreakCount };
 }
 
 const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December'
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 const GRADIENT_CLASSES = [
-  'from-purple-500 to-pink-500',
-  'from-blue-500 to-cyan-500',
-  'from-green-500 to-emerald-500',
-  'from-orange-500 to-red-500',
-  'from-indigo-500 to-purple-500',
-  'from-teal-500 to-green-500',
+  "from-purple-500 to-pink-500",
+  "from-blue-500 to-cyan-500",
+  "from-green-500 to-emerald-500",
+  "from-orange-500 to-red-500",
+  "from-indigo-500 to-purple-500",
+  "from-teal-500 to-green-500",
 ];
 
 export default function MonthlyRecap() {
   const { trackers } = useLoaderData<typeof clientLoader>();
-  const recapRef = useRef<HTMLDivElement>(null);
 
   const now = new Date();
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth());
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatingCardId, setGeneratingCardId] = useState<string | null>(null);
+  const [canShare, setCanShare] = useState(false);
+
+  useEffect(() => {
+    // Check if Web Share API is available
+    setCanShare(typeof navigator !== "undefined" && "share" in navigator);
+  }, []);
 
   const loadMonthlyData = async () => {
     setLoading(true);
     const { start, end } = getMonthDateRange(selectedYear, selectedMonth);
+
+    // Calculate total days in the month
+    const totalDaysInMonth = new Date(
+      selectedYear,
+      selectedMonth + 1,
+      0
+    ).getDate();
 
     const stats: MonthlyStats[] = [];
 
@@ -123,14 +170,15 @@ export default function MonthlyRecap() {
       const allEntries = await getEntryHistory(tracker.id);
 
       // Filter entries by date range
-      const entries = allEntries.filter(entry =>
-        entry.date >= start && entry.date <= end
+      const entries = allEntries.filter(
+        (entry) => entry.date >= start && entry.date <= end
       );
 
       if (entries.length === 0) continue;
 
       const total = entries.reduce((sum, entry) => sum + entry.value, 0);
-      const daysTracked = new Set(entries.map(e => e.date)).size;
+      const daysTracked = new Set(entries.map((e) => e.date)).size;
+      const daysMissed = totalDaysInMonth - daysTracked;
       const average = total / daysTracked;
 
       // Find best day
@@ -153,6 +201,7 @@ export default function MonthlyRecap() {
         tracker,
         total,
         daysTracked,
+        daysMissed,
         average,
         bestDay,
         entries,
@@ -163,17 +212,18 @@ export default function MonthlyRecap() {
     setLoading(false);
   };
 
-  const handleGenerateImage = async () => {
-    if (!recapRef.current) return;
+  const handleDownloadCard = async (cardId: string, trackerTitle: string) => {
+    const cardElement = document.getElementById(`card-${cardId}`);
+    if (!cardElement) return;
 
-    setIsGenerating(true);
+    setGeneratingCardId(cardId);
 
     try {
       // Wait a bit for the UI to update
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
-      const canvas = await html2canvas(recapRef.current, {
-        backgroundColor: '#0a0a0a',
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: null,
         scale: 2,
         logging: false,
       });
@@ -183,17 +233,79 @@ export default function MonthlyRecap() {
         if (!blob) return;
 
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = document.createElement("a");
         a.href = url;
-        a.download = `monthly-recap-${selectedYear}-${(selectedMonth + 1).toString().padStart(2, '0')}.png`;
+        const fileName = `${trackerTitle
+          .toLowerCase()
+          .replace(/\s+/g, "-")}-${MONTH_NAMES[
+          selectedMonth
+        ].toLowerCase()}-${selectedYear}.png`;
+        a.download = fileName;
         a.click();
 
         URL.revokeObjectURL(url);
-        setIsGenerating(false);
+        setGeneratingCardId(null);
       });
     } catch (error) {
-      console.error('Failed to generate image:', error);
-      setIsGenerating(false);
+      console.error("Failed to generate image:", error);
+      setGeneratingCardId(null);
+    }
+  };
+
+  const handleShareCard = async (cardId: string, trackerTitle: string) => {
+    const cardElement = document.getElementById(`card-${cardId}`);
+    if (!cardElement) return;
+
+    setGeneratingCardId(cardId);
+
+    try {
+      // Wait a bit for the UI to update
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false,
+      });
+
+      // Convert to blob
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+
+        const fileName = `${trackerTitle
+          .toLowerCase()
+          .replace(/\s+/g, "-")}-${MONTH_NAMES[
+          selectedMonth
+        ].toLowerCase()}-${selectedYear}.png`;
+        const file = new File([blob], fileName, { type: "image/png" });
+
+        // Check if Web Share API is available
+        if (navigator.share && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: `${trackerTitle} - ${MONTH_NAMES[selectedMonth]} ${selectedYear}`,
+              text: `Check out my ${trackerTitle} progress for ${MONTH_NAMES[selectedMonth]}!`,
+            });
+          } catch (error) {
+            // User cancelled or share failed
+            console.log("Share cancelled or failed:", error);
+          }
+        } else {
+          // Fallback: just download the file
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        setGeneratingCardId(null);
+      });
+    } catch (error) {
+      console.error("Failed to share image:", error);
+      setGeneratingCardId(null);
     }
   };
 
@@ -202,7 +314,10 @@ export default function MonthlyRecap() {
       {/* Header */}
       <div className="max-w-2xl mx-auto mb-6">
         <div className="flex items-center justify-between mb-6">
-          <Link to="/" className="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+          <Link
+            to="/"
+            className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+          >
             <ChevronLeft className="w-6 h-6" />
           </Link>
           <h1 className="text-2xl font-bold">Monthly Recap</h1>
@@ -237,7 +352,10 @@ export default function MonthlyRecap() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {Array.from({ length: 5 }, (_, i) => now.getFullYear() - i).map(year => (
+                  {Array.from(
+                    { length: 5 },
+                    (_, i) => now.getFullYear() - i
+                  ).map((year) => (
                     <SelectItem key={year} value={year.toString()}>
                       {year}
                     </SelectItem>
@@ -251,97 +369,150 @@ export default function MonthlyRecap() {
             className="w-full mt-3 bg-white text-black hover:bg-zinc-200"
             disabled={loading}
           >
-            {loading ? 'Loading...' : 'Generate Recap'}
+            {loading ? "Loading..." : "Generate Recap"}
           </Button>
         </div>
-
-        {/* Download Button */}
-        {monthlyStats.length > 0 && (
-          <Button
-            onClick={handleGenerateImage}
-            className="w-full mb-4 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-            disabled={isGenerating}
-          >
-            <Download className="w-4 h-4 mr-2" />
-            {isGenerating ? 'Generating...' : 'Download as Image'}
-          </Button>
-        )}
       </div>
 
       {/* Recap Content */}
       {monthlyStats.length > 0 && (
-        <div ref={recapRef} className="max-w-2xl mx-auto bg-zinc-950 p-8 rounded-2xl">
-          {/* Title */}
-          <div className="text-center mb-8">
-            <h2 className="text-4xl font-bold mb-2 bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Your {MONTH_NAMES[selectedMonth]} Recap
-            </h2>
-            <p className="text-zinc-400 text-lg">{selectedYear}</p>
-          </div>
-
-          {/* Stats Grid */}
-          <div className="space-y-6">
-            {monthlyStats.map((stat, index) => {
-              const gradientClass = GRADIENT_CLASSES[index % GRADIENT_CLASSES.length];
-              const streak = calculateStreak(stat.entries);
-              const displayTotal = stat.tracker.type === 'checkbox'
+        <div className="max-w-2xl mx-auto space-y-6">
+          {monthlyStats.map((stat, index) => {
+            const gradientClass =
+              GRADIENT_CLASSES[index % GRADIENT_CLASSES.length];
+            const { longestStreak, currentStreak } = calculateStreaks(
+              stat.entries
+            );
+            const displayTotal =
+              stat.tracker.type === "checkbox"
                 ? stat.daysTracked
                 : formatStoredValue(stat.total, stat.tracker.type);
-              const displayAvg = stat.tracker.type === 'checkbox'
-                ? '-'
-                : formatStoredValue(Math.round(stat.average), stat.tracker.type);
-              const displayBest = stat.bestDay && stat.tracker.type !== 'checkbox'
+            const displayAvg =
+              stat.tracker.type === "checkbox"
+                ? "-"
+                : formatStoredValue(
+                    Math.round(stat.average),
+                    stat.tracker.type
+                  );
+            const displayBest =
+              stat.bestDay && stat.tracker.type !== "checkbox"
                 ? formatStoredValue(stat.bestDay.value, stat.tracker.type)
-                : '-';
+                : "-";
+            const isGenerating = generatingCardId === stat.tracker.id;
 
-              return (
-                <div
-                  key={stat.tracker.id}
-                  className={`bg-gradient-to-br ${gradientClass} rounded-2xl p-6 shadow-xl`}
-                >
-                  <h3 className="text-2xl font-bold mb-4">{stat.tracker.title}</h3>
+            return (
+              <div
+                key={stat.tracker.id}
+                id={`card-${stat.tracker.id}`}
+                className={clsx(
+                  "bg-gradient-to-br p-6 relative",
+                  gradientClass,
+                  {
+                    "shadow-xl rounded-2xl": !isGenerating,
+                  }
+                )}
+              >
+                {/* Month indicator */}
+                <div className="absolute top-6 right-6 bg-black/30 rounded-lg px-3 py-1 text-sm font-medium">
+                  {MONTH_NAMES[selectedMonth]} {selectedYear}
+                </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{displayTotal}</div>
-                      <div className="text-sm opacity-90 mt-1">
-                        {stat.tracker.type === 'checkbox' ? 'Days Completed' : 'Total'}
-                      </div>
-                    </div>
+                <h3 className="text-2xl font-bold mb-4 pr-32">
+                  {stat.tracker.title}
+                </h3>
 
-                    <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{stat.daysTracked}</div>
-                      <div className="text-sm opacity-90 mt-1">Days Tracked</div>
-                    </div>
-
-                    <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{displayAvg}</div>
-                      <div className="text-sm opacity-90 mt-1">Daily Average</div>
-                    </div>
-
-                    <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{streak}</div>
-                      <div className="text-sm opacity-90 mt-1">Day Streak</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-black/20 rounded-xl p-4">
+                    <div className="text-3xl font-bold">{displayTotal}</div>
+                    <div className="text-sm opacity-90 mt-1">
+                      {stat.tracker.type === "checkbox"
+                        ? "Days Completed"
+                        : "Month total"}
                     </div>
                   </div>
 
-                  {stat.bestDay && stat.tracker.type !== 'checkbox' && (
-                    <div className="mt-4 bg-black/20 rounded-xl p-4">
-                      <div className="text-sm opacity-90">Best Day</div>
+                  <div className="bg-black/20 rounded-xl p-4">
+                    <div className="text-3xl font-bold">{stat.daysTracked}</div>
+                    <div className="text-sm opacity-90 mt-1">Days Tracked</div>
+                  </div>
+
+                  <div className="bg-black/20 rounded-xl p-4">
+                    <div className="text-3xl font-bold">{displayAvg}</div>
+                    <div className="text-sm opacity-90 mt-1">Daily Average</div>
+                  </div>
+
+                  <div className="bg-black/20 rounded-xl p-4">
+                    <div className="text-3xl font-bold">{longestStreak}</div>
+                    <div className="text-sm opacity-90 mt-1">
+                      Longest Streak
+                    </div>
+                  </div>
+
+                  <div className="bg-black/20 rounded-xl p-4">
+                    <div className="text-3xl font-bold">{currentStreak}</div>
+                    <div className="text-sm opacity-90 mt-1">
+                      Current Streak
+                    </div>
+                  </div>
+
+                  <div className="bg-black/20 rounded-xl p-4">
+                    <div className="text-3xl font-bold">{stat.daysMissed}</div>
+                    <div className="text-sm opacity-90 mt-1">Days Missed</div>
+                  </div>
+
+                  {stat.bestDay && stat.tracker.type !== "checkbox" && (
+                    <div className="bg-black/20 rounded-xl p-4 col-span-2">
+                      <div className="text-sm opacity-90">Most tracked on</div>
                       <div className="text-xl font-bold mt-1">
-                        {displayBest} on {new Date(stat.bestDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        {displayBest} on{" "}
+                        {new Date(stat.bestDay.date).toLocaleDateString(
+                          "en-US",
+                          {
+                            month: "short",
+                            day: "numeric",
+                          }
+                        )}
                       </div>
                     </div>
                   )}
                 </div>
-              );
-            })}
-          </div>
 
-          {/* Footer */}
-          <div className="text-center mt-8 text-zinc-500 text-sm">
-            Generated with Anything Tracker
-          </div>
+                {/* Action buttons - hidden during image generation */}
+                {!isGenerating && (
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      onClick={() =>
+                        handleDownloadCard(stat.tracker.id, stat.tracker.title)
+                      }
+                      className={`${
+                        canShare ? "flex-1" : "w-full"
+                      } bg-black/30 hover:bg-black/40 text-white border-0`}
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                    {canShare && (
+                      <Button
+                        onClick={() =>
+                          handleShareCard(stat.tracker.id, stat.tracker.title)
+                        }
+                        className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
+                      >
+                        <Share2 className="w-4 h-4 mr-2" />
+                        Share
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {isGenerating && (
+                  <div className="text-center mt-4 text-white/50 text-xs">
+                    Generated with tracker.mykhailo.net
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -349,14 +520,18 @@ export default function MonthlyRecap() {
       {!loading && monthlyStats.length === 0 && trackers.length > 0 && (
         <div className="max-w-2xl mx-auto text-center text-zinc-400 mt-12">
           <p className="text-lg mb-2">Select a month to view your recap</p>
-          <p className="text-sm">Choose a month and year above, then click Generate Recap</p>
+          <p className="text-sm">
+            Choose a month and year above, then click Generate Recap
+          </p>
         </div>
       )}
 
       {!loading && trackers.length === 0 && (
         <div className="max-w-2xl mx-auto text-center text-zinc-400 mt-12">
           <p className="text-lg mb-2">No trackers yet</p>
-          <p className="text-sm">Create some trackers and log entries to see your recap</p>
+          <p className="text-sm">
+            Create some trackers and log entries to see your recap
+          </p>
         </div>
       )}
     </div>
