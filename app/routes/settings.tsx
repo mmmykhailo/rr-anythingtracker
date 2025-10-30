@@ -273,7 +273,11 @@ export default function SettingsPage() {
               </Button>
               <div className="text-xs text-muted-foreground mt-2">
                 Download creates a JSON file with all your trackers and history.
-                Import REPLACES all existing data.
+                Import might break existing data. Please backup your data before
+                importing.
+                <br />
+                It is recommended to import data exported from the same version
+                of AnythingTracker.
               </div>
             </div>
           </CardContent>
