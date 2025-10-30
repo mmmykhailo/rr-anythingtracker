@@ -388,8 +388,9 @@ export default function SettingsPage() {
             <div className="text-sm text-muted-foreground space-y-2">
               <p>
                 A privacy-first habit tracker that stores all data locally in
-                your browser. No servers, no tracking, complete ownership of
-                your data.
+                your browser—no servers, no tracking, complete ownership of your
+                data—with optional sync across devices via a private, end-to-end
+                encrypted GitHub Gist.
               </p>
               <div className="pt-2 border-t mt-3">
                 <span className="text-xs font-medium">
