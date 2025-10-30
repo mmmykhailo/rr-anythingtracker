@@ -50,7 +50,7 @@ interface AnythingTrackerDB extends DBSchema {
 }
 
 const DB_NAME = "AnythingTrackerDB";
-const DB_VERSION = 5;
+const DB_VERSION = 6;
 
 let dbInstance: IDBPDatabase<AnythingTrackerDB> | null = null;
 
@@ -61,7 +61,7 @@ export async function initDB(): Promise<IDBPDatabase<AnythingTrackerDB>> {
   }
 
   dbInstance = await openDB<AnythingTrackerDB>(DB_NAME, DB_VERSION, {
-    upgrade(db, oldVersion) {
+    async upgrade(db, oldVersion, newVersion, transaction) {
       // Create trackers store
       if (!db.objectStoreNames.contains("trackers")) {
         const trackersStore = db.createObjectStore("trackers", {
@@ -95,6 +95,63 @@ export async function initDB(): Promise<IDBPDatabase<AnythingTrackerDB>> {
         entryTagsStore.createIndex("by-entry", "entryId");
         entryTagsStore.createIndex("by-tracker", "trackerId");
         entryTagsStore.createIndex("by-tracker-tag", ["trackerId", "tagName"]);
+      }
+
+      // Migration: Update "none" type tracker values to use new conversion factor (v6)
+      if (oldVersion < 6) {
+        console.log('Starting migration for "none" type trackers to v6...');
+
+        const trackersStore = transaction.objectStore("trackers");
+        const entriesStore = transaction.objectStore("entries");
+
+        // Get all trackers
+        const trackers = await trackersStore.getAll();
+
+        // Filter for "none" type trackers
+        const noneTrackers = trackers.filter((t) => t.type === "none");
+
+        if (noneTrackers.length > 0) {
+          console.log(
+            `Migrating ${noneTrackers.length} "none" type tracker(s)...`
+          );
+
+          // For each "none" tracker, update entries and goals
+          for (const tracker of noneTrackers) {
+            // Update entries
+            const entries = await entriesStore
+              .index("by-tracker")
+              .getAll(tracker.id);
+
+            console.log(
+              `Migrating ${entries.length} entries for tracker "${tracker.title}"`
+            );
+
+            // Multiply each entry value by 1000
+            for (const entry of entries) {
+              const updatedEntry = {
+                ...entry,
+                value: entry.value * 1000,
+              };
+              await entriesStore.put(updatedEntry);
+            }
+
+            // Update tracker goal if it exists
+            if (tracker.goal !== undefined && tracker.goal > 0) {
+              const updatedTracker = {
+                ...tracker,
+                goal: tracker.goal * 1000,
+              };
+              await trackersStore.put(updatedTracker);
+              console.log(
+                `Updated goal for tracker "${tracker.title}": ${tracker.goal} -> ${updatedTracker.goal}`
+              );
+            }
+          }
+
+          console.log('Migration complete for "none" type trackers');
+        } else {
+          console.log('No "none" type trackers found, skipping migration');
+        }
       }
     },
     blocked(currentVersion, blockedVersion, event) {
