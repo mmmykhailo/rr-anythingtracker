@@ -12,8 +12,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { ChevronLeft, Download, Calendar, Share2 } from "lucide-react";
+import {
+  ChevronLeft,
+  Download,
+  Calendar,
+  Share2,
+  CalendarX,
+} from "lucide-react";
 import clsx from "clsx";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+  EmptyDescription,
+} from "~/components/ui/empty";
 
 export async function clientLoader() {
   const trackers = await getAllTrackers();
@@ -146,6 +159,7 @@ export default function MonthlyRecap() {
   const [loading, setLoading] = useState(false);
   const [generatingCardId, setGeneratingCardId] = useState<string | null>(null);
   const [canShare, setCanShare] = useState(false);
+  const [hasGenerated, setHasGenerated] = useState(false);
 
   useEffect(() => {
     // Check if Web Share API is available
@@ -209,6 +223,7 @@ export default function MonthlyRecap() {
     }
 
     setMonthlyStats(stats);
+    setHasGenerated(true);
     setLoading(false);
   };
 
@@ -516,23 +531,59 @@ export default function MonthlyRecap() {
         </div>
       )}
 
-      {/* Empty State */}
-      {!loading && monthlyStats.length === 0 && trackers.length > 0 && (
-        <div className="max-w-2xl mx-auto text-center text-zinc-400 mt-12">
-          <p className="text-lg mb-2">Select a month to view your recap</p>
-          <p className="text-sm">
-            Choose a month and year above, then click Generate Recap
-          </p>
-        </div>
-      )}
+      {/* Empty State - No data for selected month */}
+      {!loading &&
+        monthlyStats.length === 0 &&
+        trackers.length > 0 &&
+        hasGenerated && (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <CalendarX className="w-6 h-6" />
+              </EmptyMedia>
+              <EmptyTitle>
+                No data for {MONTH_NAMES[selectedMonth]} {selectedYear}
+              </EmptyTitle>
+              <EmptyDescription>
+                There are no tracked entries for the selected month. Try
+                selecting a different month or start tracking to see your recap.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
 
+      {/* Empty State - No month selected yet */}
+      {!loading &&
+        monthlyStats.length === 0 &&
+        trackers.length > 0 &&
+        !hasGenerated && (
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Calendar className="w-6 h-6" />
+              </EmptyMedia>
+              <EmptyTitle>Select a month to view your recap</EmptyTitle>
+              <EmptyDescription>
+                Choose a month and year above, then click Generate Recap to see
+                your tracking statistics.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        )}
+
+      {/* Empty State - No trackers */}
       {!loading && trackers.length === 0 && (
-        <div className="max-w-2xl mx-auto text-center text-zinc-400 mt-12">
-          <p className="text-lg mb-2">No trackers yet</p>
-          <p className="text-sm">
-            Create some trackers and log entries to see your recap
-          </p>
-        </div>
+        <Empty>
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CalendarX className="w-6 h-6" />
+            </EmptyMedia>
+            <EmptyTitle>No trackers yet</EmptyTitle>
+            <EmptyDescription>
+              Create some trackers and log entries to see your monthly recap.
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
     </div>
   );
