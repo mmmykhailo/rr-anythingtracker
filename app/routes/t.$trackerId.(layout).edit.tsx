@@ -295,10 +295,8 @@ export default function TrackerEditPage() {
                     : null
                 }
                 onChange={(displayValue) => {
-                  console.log({ displayValue });
                   if (displayValue !== null) {
                     const storedValue = toStoredValue(displayValue, state.type);
-                    console.log({ storedValue });
                     updateField("goal", storedValue);
                   } else {
                     updateField("goal", undefined);
