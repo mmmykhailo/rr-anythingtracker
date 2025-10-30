@@ -8,7 +8,7 @@
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "generate-release": "bun scripts/generate-release.js",
+    "generate-release": "git fetch && bun scripts/generate-release.js",
     "test": "bun test"
   },
   "dependencies": {
