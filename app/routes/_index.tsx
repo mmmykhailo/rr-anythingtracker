@@ -228,7 +228,7 @@ export default function Home() {
           </Empty>
         ) : (
           <>
-            <div className="px-2 w-full flex items-center pb-2">
+            <div className="w-full flex items-center pb-2">
               <div
                 className="ml-auto w-2/3 grid gap-1 text-xs font-medium text-center"
                 style={{
