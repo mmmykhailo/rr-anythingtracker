@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.4] - 2025-10-30
+
+### Changes
+
+- minor application code-related improvements (4bb7d8b, 232cb7d, 440e71a)
+- improve multiple texts across the app (dfd224e, 221217e)
+
+
 ## [1.0.3] - 2025-10-30
 
 ### Changes
