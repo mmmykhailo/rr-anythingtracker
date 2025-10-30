@@ -36,6 +36,7 @@ import {
 } from "~/lib/user-settings";
 import { useStateWithDelayedReset } from "~/lib/hooks";
 import { APP_VERSION, CHANGELOG } from "~/lib/version";
+import clsx from "clsx";
 
 export async function clientAction({ request }: ClientActionFunctionArgs) {
   const formData = await request.formData();
@@ -291,7 +292,9 @@ export default function SettingsPage() {
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm">Status</span>
-                <span className={`text-sm font-medium ${gitHubStatus.color}`}>
+                <span
+                  className={clsx("text-sm font-medium", gitHubStatus.color)}
+                >
                   {gitHubStatus.text}
                 </span>
               </div>
