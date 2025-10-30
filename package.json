@@ -8,7 +8,8 @@
     "dev": "react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
-    "generate-release": "bun scripts/generate-release.js"
+    "generate-release": "bun scripts/generate-release.js",
+    "test": "bun test"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.2",
@@ -45,6 +46,7 @@
     "@types/node": "^20",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
+    "fake-indexeddb": "^6.2.4",
     "sharp": "^0.34.4",
     "tailwindcss": "^4.1.4",
     "tw-animate-css": "^1.3.5",

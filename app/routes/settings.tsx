@@ -78,7 +78,7 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
         };
       }
 
-      await importData(data, true);
+      await importData(data);
       debouncedDataChange.dispatch("data_imported");
 
       return {

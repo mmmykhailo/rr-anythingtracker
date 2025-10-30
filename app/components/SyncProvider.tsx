@@ -89,7 +89,9 @@ export function SyncProvider({ children }: { children: ReactNode }) {
 
       // Check if auto-sync should be blocked due to WiFi-only setting
       if (isAutoSync && !shouldAutoSync()) {
-        console.log("Auto-sync skipped: WiFi-only mode enabled and not on WiFi");
+        console.log(
+          "Auto-sync skipped: WiFi-only mode enabled and not on WiFi"
+        );
         return;
       }
 
@@ -109,7 +111,6 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         });
 
         let shouldUpload = true;
-        let syncAction = "none";
 
         if (remoteData && validateExportData(remoteData)) {
           // Check if this is first-time sync (no trackers in local data)
@@ -123,9 +124,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
               message: "First-time sync, downloading data...",
             }));
 
-            await importData(remoteData, true);
+            await importData(remoteData);
             shouldUpload = false;
-            syncAction = "downloaded";
 
             const now = new Date();
             localStorage.setItem("last_sync_time", now.toISOString());
@@ -184,9 +184,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                   }));
 
                   // Import remote data
-                  await importData(remoteData, true);
+                  await importData(remoteData);
                   shouldUpload = false;
-                  syncAction = "downloaded";
 
                   const now = new Date();
                   localStorage.setItem("last_sync_time", now.toISOString());
@@ -219,9 +218,8 @@ export function SyncProvider({ children }: { children: ReactNode }) {
                   message: "Auto-downloading...",
                 }));
 
-                await importData(remoteData, true);
+                await importData(remoteData);
                 shouldUpload = false;
-                syncAction = "downloaded";
 
                 const now = new Date();
                 localStorage.setItem("last_sync_time", now.toISOString());
