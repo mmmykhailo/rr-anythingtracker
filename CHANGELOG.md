@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.3] - 2025-10-30
+
+### Changes
+
+- remove unneeded padding on tracker list header (30def34)
+- add proper data merging when importing data (b5461a8)
+- add monthly recap (cadf731)
+- add a setting to auto sync only via wifi (10bb91a)
+- add more padding to the bottom (a24ac95)
+- allow setting decimal goal and change default conversion factor to 1000 (29adb37)
+
+
 ## [1.0.2] - 2025-10-29
 
 ### Changes
