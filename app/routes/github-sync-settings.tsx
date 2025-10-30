@@ -16,6 +16,7 @@ import {
 import { downloadJsonFromGist } from "~/lib/github-gist-sync";
 import { isCryptoSupported } from "~/lib/crypto";
 import { EncryptionMigrationInfo } from "~/components/EncryptionMigrationInfo";
+import { WifiOnlyAutoSyncSetting } from "~/components/settings/WifiOnlyAutoSyncSetting";
 import {
   getGithubToken,
   setGithubToken,
@@ -313,6 +314,8 @@ export default function GitHubSyncSettingsPage() {
               </div>
             )}
           </div>
+
+          <WifiOnlyAutoSyncSetting />
 
           {hasExistingGistData &&
             encryptionEnabled !== savedEncryptionEnabled && (

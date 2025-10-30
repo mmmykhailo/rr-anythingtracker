@@ -14,6 +14,7 @@ import {
   uploadJsonToGist,
   downloadJsonFromGist,
   isEncryptionEnabled,
+  shouldAutoSync,
 } from "~/lib/github-gist-sync";
 import { exportData, importData, validateExportData } from "~/lib/data-export";
 import {
@@ -83,6 +84,12 @@ export function SyncProvider({ children }: { children: ReactNode }) {
         !isConfigured ||
         ["uploading", "downloading", "checking"].includes(syncState.status)
       ) {
+        return;
+      }
+
+      // Check if auto-sync should be blocked due to WiFi-only setting
+      if (isAutoSync && !shouldAutoSync()) {
+        console.log("Auto-sync skipped: WiFi-only mode enabled and not on WiFi");
         return;
       }
 

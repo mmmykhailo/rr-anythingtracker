@@ -7,6 +7,11 @@ export {
   setOnboardingCompleted,
   isEncryptionEnabled,
   setEncryptionEnabled,
+  isWifiOnlyAutoSyncEnabled,
+  setWifiOnlyAutoSyncEnabled,
+  isNetworkInfoSupported,
+  isConnectedToWifi,
+  shouldAutoSync,
 } from "./config";
 
 // TypeScript types
