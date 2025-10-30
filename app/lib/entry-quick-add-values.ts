@@ -20,7 +20,7 @@ export const quickAddValuesMap: Record<
     { label: "1000", value: 1000 },
   ],
   none: [
-    { label: "1", value: 1 },
-    { label: "5", value: 5 },
+    { label: "1", value: 1000 },   // 1.0 = 1000
+    { label: "5", value: 5000 },   // 5.0 = 5000
   ],
 };

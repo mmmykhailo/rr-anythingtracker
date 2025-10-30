@@ -1,8 +1,23 @@
 import { useEffect, useState } from "react";
-import { useLoaderData, useRevalidator, redirect, Form, useNavigation, useActionData } from "react-router";
-import type { ClientLoaderFunctionArgs, ClientActionFunctionArgs } from "react-router";
+import {
+  useLoaderData,
+  useRevalidator,
+  redirect,
+  Form,
+  useNavigation,
+  useActionData,
+} from "react-router";
+import type {
+  ClientLoaderFunctionArgs,
+  ClientActionFunctionArgs,
+} from "react-router";
 import { Save, Trash2 } from "lucide-react";
-import { getTrackerById, getEntryHistory, updateTracker, deleteTracker } from "~/lib/db";
+import {
+  getTrackerById,
+  getEntryHistory,
+  updateTracker,
+  deleteTracker,
+} from "~/lib/db";
 import { debouncedDataChange } from "~/lib/data-change-events";
 import { useFormState } from "~/lib/hooks";
 import { Button } from "~/components/ui/button";
@@ -22,9 +37,10 @@ import {
   trackerTypes,
   trackerTypesLabels,
 } from "~/lib/trackers";
+import { NumberInput } from "~/components/NumberInput";
 import {
-  parseInputToStored,
   toDisplayValue,
+  toStoredValue,
   getInputStep,
 } from "~/lib/number-conversions";
 
@@ -49,7 +65,10 @@ export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   }
 }
 
-export async function clientAction({ params, request }: ClientActionFunctionArgs) {
+export async function clientAction({
+  params,
+  request,
+}: ClientActionFunctionArgs) {
   const trackerId = params.trackerId;
   if (!trackerId) {
     throw new Response("Tracker ID is required", { status: 400 });
@@ -85,7 +104,8 @@ export async function clientAction({ params, request }: ClientActionFunctionArgs
         title: title.trim(),
         type,
         isNumber: type !== "checkbox",
-        goal: goalStr && parseFloat(goalStr) > 0 ? parseFloat(goalStr) : undefined,
+        goal:
+          goalStr && parseFloat(goalStr) > 0 ? parseFloat(goalStr) : undefined,
         isHidden,
       };
 
@@ -137,8 +157,12 @@ export default function TrackerEditPage() {
       isHidden: tracker.isHidden || false,
     });
 
-  const isSaving = navigation.state === "submitting" && navigation.formData?.get("intent") === "update";
-  const isDeleting = navigation.state === "submitting" && navigation.formData?.get("intent") === "delete";
+  const isSaving =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "update";
+  const isDeleting =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "delete";
 
   useEffect(() => {
     const handleDataChange = () => {
@@ -188,8 +212,14 @@ export default function TrackerEditPage() {
       <Form method="post">
         <input type="hidden" name="intent" value="update" />
         <input type="hidden" name="type" value={state.type} />
-        <input type="hidden" name="isHidden" value={state.isHidden.toString()} />
-        {state.goal && <input type="hidden" name="goal" value={state.goal.toString()} />}
+        <input
+          type="hidden"
+          name="isHidden"
+          value={state.isHidden.toString()}
+        />
+        {state.goal && (
+          <input type="hidden" name="goal" value={state.goal.toString()} />
+        )}
 
         <div className="flex flex-col py-6 gap-4">
           <div className="grid items-center gap-3">
@@ -257,24 +287,25 @@ export default function TrackerEditPage() {
           {!isCheckboxTypeSelected && (
             <div className="grid items-center gap-3">
               <Label htmlFor="trackerDailyGoal">Daily goal (optional)</Label>
-              <Input
-                type="number"
+              <NumberInput
                 id="trackerDailyGoal"
-                placeholder={state.type === "liters" ? "1" : "100"}
-                step={getInputStep(state.type)}
-                value={state.goal ? toDisplayValue(state.goal, state.type) : ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value) {
-                    const storedValue = parseInputToStored(value, state.type);
-                    updateField(
-                      "goal",
-                      storedValue !== null ? storedValue : undefined
-                    );
+                value={
+                  state.goal !== undefined
+                    ? toDisplayValue(state.goal, state.type)
+                    : null
+                }
+                onChange={(displayValue) => {
+                  console.log({ displayValue });
+                  if (displayValue !== null) {
+                    const storedValue = toStoredValue(displayValue, state.type);
+                    console.log({ storedValue });
+                    updateField("goal", storedValue);
                   } else {
                     updateField("goal", undefined);
                   }
                 }}
+                step={getInputStep(state.type)}
+                placeholder={state.type === "liters" ? "1" : "100"}
               />
             </div>
           )}
