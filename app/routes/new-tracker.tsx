@@ -1,7 +1,17 @@
 import { ChevronLeft, Save } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, redirect, useLoaderData, Form, useNavigation, useActionData } from "react-router";
-import type { ClientLoaderFunctionArgs, ClientActionFunctionArgs } from "react-router";
+import {
+  Link,
+  redirect,
+  useLoaderData,
+  Form,
+  useNavigation,
+  useActionData,
+} from "react-router";
+import type {
+  ClientLoaderFunctionArgs,
+  ClientActionFunctionArgs,
+} from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -22,9 +32,10 @@ import {
   trackerTypes,
   trackerTypesLabels,
 } from "~/lib/trackers";
+import { NumberInput } from "~/components/NumberInput";
 import {
-  parseInputToStored,
   toDisplayValue,
+  toStoredValue,
   getInputStep,
 } from "~/lib/number-conversions";
 
@@ -62,7 +73,9 @@ export async function clientAction({ request }: ClientActionFunctionArgs) {
     };
 
     const newTracker = await saveTracker(trackerData);
-    debouncedDataChange.dispatch("tracker_created", { trackerId: newTracker.id });
+    debouncedDataChange.dispatch("tracker_created", {
+      trackerId: newTracker.id,
+    });
 
     return redirect("/");
   } catch (error) {
@@ -161,9 +174,19 @@ export default function NewTrackerPage() {
         </div>
         <div className="flex flex-col py-6 gap-4">
           <input type="hidden" name="type" value={state.type} />
-          <input type="hidden" name="parentId" value={state.parentId || "none"} />
-          <input type="hidden" name="isHidden" value={state.isHidden.toString()} />
-          {state.goal && <input type="hidden" name="goal" value={state.goal.toString()} />}
+          <input
+            type="hidden"
+            name="parentId"
+            value={state.parentId || "none"}
+          />
+          <input
+            type="hidden"
+            name="isHidden"
+            value={state.isHidden.toString()}
+          />
+          {state.goal !== undefined && (
+            <input type="hidden" name="goal" value={state.goal.toString()} />
+          )}
 
           <div className="grid items-center gap-3">
             <Label htmlFor="trackerName">Tracker name</Label>
@@ -219,24 +242,23 @@ export default function NewTrackerPage() {
           {!isCheckboxTypeSelected && (
             <div className="grid items-center gap-3">
               <Label htmlFor="trackerDailyGoal">Daily goal (optional)</Label>
-              <Input
-                type="number"
+              <NumberInput
                 id="trackerDailyGoal"
-                placeholder={state.type === "liters" ? "1" : "100"}
-                step={getInputStep(state.type)}
-                value={state.goal ? toDisplayValue(state.goal, state.type) : ""}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value) {
-                    const storedValue = parseInputToStored(value, state.type);
-                    updateField(
-                      "goal",
-                      storedValue !== null ? storedValue : undefined
-                    );
+                value={
+                  state.goal !== undefined
+                    ? toDisplayValue(state.goal, state.type)
+                    : null
+                }
+                onChange={(displayValue) => {
+                  if (displayValue !== null) {
+                    const storedValue = toStoredValue(displayValue, state.type);
+                    updateField("goal", storedValue);
                   } else {
                     updateField("goal", undefined);
                   }
                 }}
+                step={getInputStep(state.type)}
+                placeholder={state.type === "liters" ? "1" : "100"}
               />
             </div>
           )}

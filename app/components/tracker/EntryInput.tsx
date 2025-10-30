@@ -7,13 +7,13 @@ import { formatDateString } from "~/lib/dates";
 import { quickAddValuesMap } from "~/lib/entry-quick-add-values";
 import {
   formatStoredValue,
-  parseInputToStored,
-  toDisplayValue,
-  getInputStep,
-  formatForInput,
   displayUnits,
+  toDisplayValue,
+  toStoredValue,
+  getInputStep,
 } from "~/lib/number-conversions";
 import { cn } from "~/lib/utils";
+import { NumberInput } from "~/components/NumberInput";
 
 import type { Tracker } from "~/lib/trackers";
 import { useRevalidator } from "react-router";
@@ -37,18 +37,21 @@ export function EntryInput({
   entryLoading,
   mostUsedTags,
 }: EntryInputProps) {
-  const [inputValue, setInputValue] = useState<number | null>(null);
+  // Store display value (e.g., 1.5 for liters), will convert to stored value (1500ml) on submit
+  const [displayValue, setDisplayValue] = useState<number | null>(null);
   const [comment, setComment] = useState("");
   const { revalidate } = useRevalidator();
 
   const handleSubmit = async () => {
-    if (inputValue === null || inputValue === 0) {
+    if (displayValue === null || displayValue === 0) {
       return;
     }
 
     try {
-      await onSubmit(inputValue, comment);
-      setInputValue(null);
+      // Convert display value to stored value (e.g., 1.5L -> 1500ml)
+      const storedValue = toStoredValue(displayValue, tracker.type);
+      await onSubmit(storedValue, comment);
+      setDisplayValue(null);
       setComment("");
       revalidate();
     } catch (error) {
@@ -157,46 +160,34 @@ export function EntryInput({
             </span>
           </div>
 
-          <div className="relative">
-            <Input
-              id="value"
-              type="text"
-              inputMode="decimal"
-              pattern="[0-9]*"
-              step={getInputStep(tracker.type)}
-              value={formatForInput(inputValue, tracker.type)}
-              onChange={(e) =>
-                setInputValue(parseInputToStored(e.target.value, tracker.type))
-              }
-              placeholder="Enter value"
-            />
-            {!!inputValue && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="absolute inset-0 left-auto rounded-l-none"
-                onClick={() => setInputValue(null)}
-              >
-                <X />
-              </Button>
-            )}
-          </div>
+          <NumberInput
+            id="value"
+            value={displayValue}
+            onChange={setDisplayValue}
+            step={getInputStep(tracker.type)}
+            placeholder="Enter value"
+            showClearButton={true}
+          />
 
           {!!quickAddValues && (
             <div className="flex gap-4 overflow-auto -mb-2 pb-2 -mx-4 w-[calc(100%+2rem)] px-4">
-              {quickAddValues.map(({ label, value }) => (
-                <Button
-                  className="grow"
-                  variant="outline"
-                  key={value}
-                  onClick={async () => {
-                    setInputValue((oldValue) => (oldValue || 0) + value);
-                  }}
-                  disabled={entryLoading}
-                >
-                  +{label}
-                </Button>
-              ))}
+              {quickAddValues.map(({ label, value }) => {
+                // Convert stored value to display value for quick-add buttons
+                const displayQuickAddValue = toDisplayValue(value, tracker.type);
+                return (
+                  <Button
+                    className="grow"
+                    variant="outline"
+                    key={value}
+                    onClick={async () => {
+                      setDisplayValue((oldValue) => (oldValue || 0) + displayQuickAddValue);
+                    }}
+                    disabled={entryLoading}
+                  >
+                    +{label}
+                  </Button>
+                );
+              })}
             </div>
           )}
 
@@ -231,7 +222,7 @@ export function EntryInput({
             </div>
           )}
 
-          <Button onClick={handleSubmit} disabled={entryLoading || !inputValue}>
+          <Button onClick={handleSubmit} disabled={entryLoading || !displayValue}>
             <PlusIcon /> Add
           </Button>
         </>

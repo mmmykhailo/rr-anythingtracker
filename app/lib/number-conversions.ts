@@ -6,7 +6,7 @@ export const conversionFactors: Record<TrackerType, number> = {
   liters: 1000, // Store as milliliters (1L = 1000ml)
   steps: 1,     // Already in smallest unit
   checkbox: 1,  // Binary value (0 or 1)
-  none: 1,      // Generic counter, no conversion
+  none: 1000,   // Store with precision (1.0 = 1000)
 };
 
 // Define decimal places for display formatting
@@ -14,7 +14,7 @@ export const displayDecimals: Record<TrackerType, number> = {
   liters: 3,    // Show up to 3 decimal places for liters (e.g., 0.001L)
   steps: 0,     // No decimals for steps
   checkbox: 0,  // No decimals for checkbox
-  none: 0,      // No decimals for generic counter
+  none: 3,      // Show up to 3 decimal places for generic values
 };
 
 // Define display units
