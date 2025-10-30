@@ -53,7 +53,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body className="dark bg-background min-h-full">
         <SyncProvider>
           <div className="root">
-            <div className="max-w-md mx-auto px-4 pb-4">{children}</div>
+            <div className="max-w-md mx-auto px-4 pb-8">{children}</div>
           </div>
           <DevUtils />
         </SyncProvider>
