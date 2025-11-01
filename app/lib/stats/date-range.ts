@@ -1,3 +1,4 @@
+import { addDays, startOfYear, subMonths, subYears } from "date-fns";
 import { formatDateString } from "~/lib/dates";
 import type { StatsPeriod } from "./types";
 import { statsPeriods } from "./types";
@@ -6,37 +7,16 @@ export function calculateDateFromPeriod(
   period: StatsPeriod,
   today: Date
 ): Date {
-  const from = new Date(today);
-  from.setHours(0, 0, 0, 0);
-
   if (period === "YTD") {
-    return new Date(today.getFullYear(), 0, 1);
+    return startOfYear(today);
   } else if (period === "1M") {
-    from.setMonth(today.getMonth() - 1);
-    from.setDate(today.getDate() + 1);
-    if (from.getMonth() === today.getMonth()) {
-      from.setDate(1);
-    }
-    return from;
+    return addDays(subMonths(today, 1), 1);
   } else if (period === "3M") {
-    from.setMonth(today.getMonth() - 3);
-    from.setDate(today.getDate() + 1);
-    if (from.getMonth() === today.getMonth()) {
-      from.setDate(1);
-    }
-    return from;
+    return addDays(subMonths(today, 3), 1);
   } else if (period === "1Y") {
-    from.setFullYear(today.getFullYear() - 1);
-    from.setDate(today.getDate() + 1);
-    if (
-      from.getMonth() === today.getMonth() &&
-      from.getFullYear() === today.getFullYear()
-    ) {
-      from.setDate(1);
-    }
-    return from;
+    return addDays(subYears(today, 1), 1);
   }
-  return from;
+  return today;
 }
 
 export function getSelectedPeriod(

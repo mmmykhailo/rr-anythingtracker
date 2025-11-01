@@ -28,6 +28,8 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "~/components/ui/empty";
+import { endOfMonth } from "date-fns";
+import { formatDateString } from "~/lib/dates";
 
 type Entry = {
   id: string;
@@ -50,11 +52,11 @@ interface MonthlyStats {
 
 function getMonthDateRange(year: number, month: number) {
   const start = new Date(year, month, 1);
-  const end = new Date(year, month + 1, 0); // Last day of month
+  const end = endOfMonth(start);
 
   return {
-    start: start.toISOString().split("T")[0],
-    end: end.toISOString().split("T")[0],
+    start: formatDateString(start),
+    end: formatDateString(end),
   };
 }
 

@@ -44,7 +44,6 @@ export async function clientLoader({
 
     const entries = allEntries.filter((entry) => {
       const entryDate = new Date(entry.date);
-      entryDate.setHours(0, 0, 0, 0);
       return entryDate >= fromDate && entryDate <= toDate;
     });
 
