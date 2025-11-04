@@ -19,6 +19,7 @@ import {
   Calendar,
   Share2,
   CalendarX,
+  CopyIcon,
 } from "lucide-react";
 import clsx from "clsx";
 import {
@@ -367,6 +368,57 @@ export default function MonthlyRecap() {
     }
   };
 
+  const handleCopyCard = async (cardId: string, trackerTitle: string) => {
+    const cardElement = document.getElementById(`card-${cardId}`);
+    if (!cardElement) return;
+
+    setGeneratingCardId(cardId);
+
+    try {
+      // Wait a bit for the UI to update
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: null,
+        scale: 2,
+        logging: false,
+      });
+
+      // Convert to blob
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+
+        try {
+          // Copy image to clipboard
+          await navigator.clipboard.write([
+            new ClipboardItem({
+              "image/png": blob,
+            }),
+          ]);
+        } catch (error) {
+          console.error("Failed to copy image to clipboard:", error);
+          // Fallback: download the file
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          const fileName = `${trackerTitle
+            .toLowerCase()
+            .replace(/\s+/g, "-")}-${MONTH_NAMES[
+            selectedMonth
+          ].toLowerCase()}-${selectedYear}.png`;
+          a.download = fileName;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+
+        setGeneratingCardId(null);
+      });
+    } catch (error) {
+      console.error("Failed to generate image:", error);
+      setGeneratingCardId(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-white p-4 pb-20">
       {/* Header */}
@@ -544,14 +596,12 @@ export default function MonthlyRecap() {
                       onClick={() =>
                         handleDownloadCard(stat.tracker.id, stat.tracker.title)
                       }
-                      className={`${
-                        canShare ? "flex-1" : "w-full"
-                      } bg-black/30 hover:bg-black/40 text-white border-0`}
+                      className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>
-                    {canShare && (
+                    {canShare ? (
                       <Button
                         onClick={() =>
                           handleShareCard(stat.tracker.id, stat.tracker.title)
@@ -560,6 +610,16 @@ export default function MonthlyRecap() {
                       >
                         <Share2 className="w-4 h-4 mr-2" />
                         Share
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() =>
+                          handleCopyCard(stat.tracker.id, stat.tracker.title)
+                        }
+                        className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
+                      >
+                        <CopyIcon className="w-4 h-4 mr-2" />
+                        Copy
                       </Button>
                     )}
                   </div>
