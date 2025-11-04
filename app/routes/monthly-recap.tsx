@@ -49,6 +49,7 @@ interface MonthlyStats {
   isTodayGoalMet: boolean;
   isCurrentMonth: boolean;
   average: number;
+  percentageDaysTracked: number;
   bestDay: { date: string; value: number } | null;
   entries: Entry[];
 }
@@ -180,6 +181,9 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       ? todayTotal >= tracker.goal
       : !!todayTotal;
     const average = daysPassed ? total / daysPassed : total;
+    const percentageDaysTracked = Math.floor(
+      (daysTracked / (totalDaysInMonth - daysLeftToEndOfMonth)) * 100
+    );
 
     const bestDay = Object.entries(dailyTotals).reduce(
       (best, [date, value]) => {
@@ -196,6 +200,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       total,
       daysTracked,
       daysMissed,
+      percentageDaysTracked,
       isTodayGoalMet,
       isCurrentMonth,
       average,
@@ -541,10 +546,23 @@ export default function MonthlyRecap() {
                     <div className="text-sm opacity-90 mt-1">Days Tracked</div>
                   </div>
 
-                  <div className="bg-black/20 rounded-xl p-4">
-                    <div className="text-3xl font-bold">{displayAvg}</div>
-                    <div className="text-sm opacity-90 mt-1">Daily Average</div>
-                  </div>
+                  {stat.tracker.type === "checkbox" ? (
+                    <div className="bg-black/20 rounded-xl p-4">
+                      <div className="text-3xl font-bold">
+                        {stat.percentageDaysTracked || 0}%
+                      </div>
+                      <div className="text-sm opacity-90 mt-1">
+                        Days Tracked (%)
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-black/20 rounded-xl p-4">
+                      <div className="text-3xl font-bold">{displayAvg}</div>
+                      <div className="text-sm opacity-90 mt-1">
+                        Daily Average
+                      </div>
+                    </div>
+                  )}
 
                   <div className="bg-black/20 rounded-xl p-4">
                     <div className="text-3xl font-bold">{longestStreak}</div>
