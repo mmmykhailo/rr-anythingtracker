@@ -276,150 +276,119 @@ export default function MonthlyRecap() {
     navigate(`/monthly-recap?year=${year}&month=${selectedMonth}`);
   };
 
-  const handleDownloadCard = async (cardId: string, trackerTitle: string) => {
+  const generateCardImage = async (cardId: string): Promise<Blob | null> => {
     const cardElement = document.getElementById(`card-${cardId}`);
-    if (!cardElement) return;
+    if (!cardElement) return null;
 
+    // Wait a bit for the UI to update
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    const canvas = await html2canvas(cardElement, {
+      backgroundColor: null,
+      scale: 3,
+      logging: false,
+      x: 1,
+      width: cardElement.offsetWidth - 1,
+    });
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      });
+    });
+  };
+
+  const getFileName = (trackerTitle: string) => {
+    return `${trackerTitle.toLowerCase().replace(/\s+/g, "-")}-${MONTH_NAMES[
+      selectedMonth
+    ].toLowerCase()}-${selectedYear}.png`;
+  };
+
+  const handleDownloadCard = async (cardId: string, trackerTitle: string) => {
     setGeneratingCardId(cardId);
 
     try {
-      // Wait a bit for the UI to update
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      const blob = await generateCardImage(cardId);
+      if (!blob) return;
 
-      const canvas = await html2canvas(cardElement, {
-        backgroundColor: null,
-        scale: 2,
-        logging: false,
-      });
-
-      // Convert to blob and download
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        const fileName = `${trackerTitle
-          .toLowerCase()
-          .replace(/\s+/g, "-")}-${MONTH_NAMES[
-          selectedMonth
-        ].toLowerCase()}-${selectedYear}.png`;
-        a.download = fileName;
-        a.click();
-
-        URL.revokeObjectURL(url);
-        setGeneratingCardId(null);
-      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = getFileName(trackerTitle);
+      a.click();
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Failed to generate image:", error);
+    } finally {
       setGeneratingCardId(null);
     }
   };
 
   const handleShareCard = async (cardId: string, trackerTitle: string) => {
-    const cardElement = document.getElementById(`card-${cardId}`);
-    if (!cardElement) return;
-
     setGeneratingCardId(cardId);
 
     try {
-      // Wait a bit for the UI to update
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      const blob = await generateCardImage(cardId);
+      if (!blob) return;
 
-      const canvas = await html2canvas(cardElement, {
-        backgroundColor: null,
-        scale: 2,
-        logging: false,
-      });
+      const fileName = getFileName(trackerTitle);
+      const file = new File([blob], fileName, { type: "image/png" });
 
-      // Convert to blob
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-
-        const fileName = `${trackerTitle
-          .toLowerCase()
-          .replace(/\s+/g, "-")}-${MONTH_NAMES[
-          selectedMonth
-        ].toLowerCase()}-${selectedYear}.png`;
-        const file = new File([blob], fileName, { type: "image/png" });
-
-        // Check if Web Share API is available
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: `${trackerTitle} - ${MONTH_NAMES[selectedMonth]} ${selectedYear}`,
-              text: `Check out my ${trackerTitle} progress for ${MONTH_NAMES[selectedMonth]}!`,
-            });
-          } catch (error) {
-            // User cancelled or share failed
-            console.log("Share cancelled or failed:", error);
-          }
-        } else {
-          // Fallback: just download the file
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = fileName;
-          a.click();
-          URL.revokeObjectURL(url);
+      // Check if Web Share API is available
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: `${trackerTitle} - ${MONTH_NAMES[selectedMonth]} ${selectedYear}`,
+            text: `Check out my ${trackerTitle} progress for ${MONTH_NAMES[selectedMonth]}!`,
+          });
+        } catch (error) {
+          // User cancelled or share failed
+          console.log("Share cancelled or failed:", error);
         }
-
-        setGeneratingCardId(null);
-      });
+      } else {
+        // Fallback: just download the file
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error("Failed to share image:", error);
+    } finally {
       setGeneratingCardId(null);
     }
   };
 
   const handleCopyCard = async (cardId: string, trackerTitle: string) => {
-    const cardElement = document.getElementById(`card-${cardId}`);
-    if (!cardElement) return;
-
     setGeneratingCardId(cardId);
 
     try {
-      // Wait a bit for the UI to update
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      const blob = await generateCardImage(cardId);
+      if (!blob) return;
 
-      const canvas = await html2canvas(cardElement, {
-        backgroundColor: null,
-        scale: 2,
-        logging: false,
-      });
-
-      // Convert to blob
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-
-        try {
-          // Copy image to clipboard
-          await navigator.clipboard.write([
-            new ClipboardItem({
-              "image/png": blob,
-            }),
-          ]);
-        } catch (error) {
-          console.error("Failed to copy image to clipboard:", error);
-          // Fallback: download the file
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          const fileName = `${trackerTitle
-            .toLowerCase()
-            .replace(/\s+/g, "-")}-${MONTH_NAMES[
-            selectedMonth
-          ].toLowerCase()}-${selectedYear}.png`;
-          a.download = fileName;
-          a.click();
-          URL.revokeObjectURL(url);
-        }
-
-        setGeneratingCardId(null);
-      });
+      try {
+        // Copy image to clipboard
+        await navigator.clipboard.write([
+          new ClipboardItem({
+            "image/png": blob,
+          }),
+        ]);
+      } catch (error) {
+        console.error("Failed to copy image to clipboard:", error);
+        // Fallback: download the file
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = getFileName(trackerTitle);
+        a.click();
+        URL.revokeObjectURL(url);
+      }
     } catch (error) {
       console.error("Failed to generate image:", error);
+    } finally {
       setGeneratingCardId(null);
     }
   };
@@ -509,145 +478,156 @@ export default function MonthlyRecap() {
             const isGenerating = generatingCardId === stat.tracker.id;
 
             return (
-              <div
-                key={stat.tracker.id}
-                id={`card-${stat.tracker.id}`}
-                className={clsx(
-                  "bg-gradient-to-br p-6 relative",
-                  gradientClass,
-                  {
-                    "shadow-xl rounded-2xl": !isGenerating,
-                  }
-                )}
-              >
-                <div className="flex items-start gap-4 justify-between">
-                  <h3 className="text-2xl font-bold mb-4 shrink">
-                    {stat.tracker.title}
-                  </h3>
+              <div className="rounded-2xl overflow-hidden">
+                <div
+                  key={stat.tracker.id}
+                  id={`card-${stat.tracker.id}`}
+                  className={clsx(
+                    "bg-gradient-to-br p-6 relative",
+                    gradientClass
+                  )}
+                >
+                  <div className="flex items-start gap-4 justify-between">
+                    <h3 className="text-2xl font-bold mb-4 shrink">
+                      {stat.tracker.title}
+                    </h3>
 
-                  {/* Month indicator */}
-                  <div className="bg-black/30 rounded-lg px-3 py-1 text-sm font-medium shrink-0">
-                    {MONTH_NAMES[selectedMonth]} {selectedYear}
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-black/20 rounded-xl p-4">
-                    <div className="text-3xl font-bold">{displayTotal}</div>
-                    <div className="text-sm opacity-90 mt-1">
-                      {stat.tracker.type === "checkbox"
-                        ? "Days Completed"
-                        : "Month total"}
+                    {/* Month indicator */}
+                    <div className="bg-black/30 rounded-lg px-3 py-1 text-sm font-medium shrink-0">
+                      {MONTH_NAMES[selectedMonth]} {selectedYear}
                     </div>
                   </div>
 
-                  <div className="bg-black/20 rounded-xl p-4">
-                    <div className="text-3xl font-bold">{stat.daysTracked}</div>
-                    <div className="text-sm opacity-90 mt-1">Days Tracked</div>
-                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-black/20 rounded-xl p-4">
+                      <div className="text-3xl font-bold">{displayTotal}</div>
+                      <div className="text-sm opacity-90 mt-1">
+                        {stat.tracker.type === "checkbox"
+                          ? "Days Completed"
+                          : "Month total"}
+                      </div>
+                    </div>
 
-                  {stat.tracker.type === "checkbox" ? (
                     <div className="bg-black/20 rounded-xl p-4">
                       <div className="text-3xl font-bold">
-                        {stat.percentageDaysTracked || 0}%
+                        {stat.daysTracked}
                       </div>
                       <div className="text-sm opacity-90 mt-1">
-                        Days Tracked (%)
+                        Days Tracked
                       </div>
                     </div>
-                  ) : (
-                    <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{displayAvg}</div>
-                      <div className="text-sm opacity-90 mt-1">
-                        Daily Average
+
+                    {stat.tracker.type === "checkbox" ? (
+                      <div className="bg-black/20 rounded-xl p-4">
+                        <div className="text-3xl font-bold">
+                          {stat.percentageDaysTracked || 0}%
+                        </div>
+                        <div className="text-sm opacity-90 mt-1">
+                          Days Tracked (%)
+                        </div>
                       </div>
+                    ) : (
+                      <div className="bg-black/20 rounded-xl p-4">
+                        <div className="text-3xl font-bold">{displayAvg}</div>
+                        <div className="text-sm opacity-90 mt-1">
+                          Daily Average
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="bg-black/20 rounded-xl p-4">
+                      <div className="text-3xl font-bold">{longestStreak}</div>
+                      <div className="text-sm opacity-90 mt-1">
+                        Longest Streak
+                      </div>
+                    </div>
+
+                    <div className="bg-black/20 rounded-xl p-4">
+                      <div className="text-3xl font-bold">{currentStreak}</div>
+                      <div className="text-sm opacity-90 mt-1">
+                        Current Streak
+                      </div>
+                    </div>
+
+                    <div className="bg-black/20 rounded-xl p-4">
+                      <div className="text-3xl font-bold">
+                        {stat.daysMissed}
+                        {!stat.isTodayGoalMet && stat.isCurrentMonth && (
+                          <span className="text-base opacity-70">
+                            {" "}
+                            (+ today)
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-sm opacity-90 mt-1">
+                        {stat.tracker.goal ? "Days Goal Missed" : "Days Missed"}
+                      </div>
+                    </div>
+
+                    {stat.bestDay && stat.tracker.type !== "checkbox" && (
+                      <div className="bg-black/20 rounded-xl p-4 col-span-2">
+                        <div className="text-sm opacity-90">
+                          Most tracked on
+                        </div>
+                        <div className="text-xl font-bold mt-1">
+                          {displayBest} on{" "}
+                          {new Date(stat.bestDay.date).toLocaleDateString(
+                            "en-US",
+                            {
+                              month: "short",
+                              day: "numeric",
+                            }
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action buttons - hidden during image generation */}
+                  {!isGenerating && (
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        onClick={() =>
+                          handleDownloadCard(
+                            stat.tracker.id,
+                            stat.tracker.title
+                          )
+                        }
+                        className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download
+                      </Button>
+                      {canShare ? (
+                        <Button
+                          onClick={() =>
+                            handleShareCard(stat.tracker.id, stat.tracker.title)
+                          }
+                          className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
+                        >
+                          <Share2 className="w-4 h-4 mr-2" />
+                          Share
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() =>
+                            handleCopyCard(stat.tracker.id, stat.tracker.title)
+                          }
+                          className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
+                        >
+                          <CopyIcon className="w-4 h-4 mr-2" />
+                          Copy
+                        </Button>
+                      )}
                     </div>
                   )}
 
-                  <div className="bg-black/20 rounded-xl p-4">
-                    <div className="text-3xl font-bold">{longestStreak}</div>
-                    <div className="text-sm opacity-90 mt-1">
-                      Longest Streak
-                    </div>
-                  </div>
-
-                  <div className="bg-black/20 rounded-xl p-4">
-                    <div className="text-3xl font-bold">{currentStreak}</div>
-                    <div className="text-sm opacity-90 mt-1">
-                      Current Streak
-                    </div>
-                  </div>
-
-                  <div className="bg-black/20 rounded-xl p-4">
-                    <div className="text-3xl font-bold">
-                      {stat.daysMissed}
-                      {!stat.isTodayGoalMet && stat.isCurrentMonth && (
-                        <span className="text-base opacity-70"> (+ today)</span>
-                      )}
-                    </div>
-                    <div className="text-sm opacity-90 mt-1">
-                      {stat.tracker.goal ? "Days Goal Missed" : "Days Missed"}
-                    </div>
-                  </div>
-
-                  {stat.bestDay && stat.tracker.type !== "checkbox" && (
-                    <div className="bg-black/20 rounded-xl p-4 col-span-2">
-                      <div className="text-sm opacity-90">Most tracked on</div>
-                      <div className="text-xl font-bold mt-1">
-                        {displayBest} on{" "}
-                        {new Date(stat.bestDay.date).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                          }
-                        )}
-                      </div>
+                  {isGenerating && (
+                    <div className="text-center mt-4 text-white/50 text-xs min-h-9 grid place-items-center">
+                      Generated with tracker.mykhailo.net
                     </div>
                   )}
                 </div>
-
-                {/* Action buttons - hidden during image generation */}
-                {!isGenerating && (
-                  <div className="flex gap-2 mt-4">
-                    <Button
-                      onClick={() =>
-                        handleDownloadCard(stat.tracker.id, stat.tracker.title)
-                      }
-                      className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
-                    >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
-                    </Button>
-                    {canShare ? (
-                      <Button
-                        onClick={() =>
-                          handleShareCard(stat.tracker.id, stat.tracker.title)
-                        }
-                        className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
-                      >
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Share
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() =>
-                          handleCopyCard(stat.tracker.id, stat.tracker.title)
-                        }
-                        className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
-                      >
-                        <CopyIcon className="w-4 h-4 mr-2" />
-                        Copy
-                      </Button>
-                    )}
-                  </div>
-                )}
-
-                {isGenerating && (
-                  <div className="text-center mt-4 text-white/50 text-xs">
-                    Generated with tracker.mykhailo.net
-                  </div>
-                )}
               </div>
             );
           })}
