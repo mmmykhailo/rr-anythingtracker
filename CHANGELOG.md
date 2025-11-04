@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.7] - 2025-11-04
+
+### Changes
+
+- add days tracked (%) field for checkbox trackers on monthly recap (e84bcac)
+- add copy monthly recap button (0853e5f)
+- better positioning for month label in monthly recap (3643118)
+
+
 ## [1.0.6] - 2025-11-04
 
 ### Changes
