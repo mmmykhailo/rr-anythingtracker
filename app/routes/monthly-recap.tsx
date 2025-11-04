@@ -28,7 +28,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "~/components/ui/empty";
-import { endOfMonth } from "date-fns";
+import { endOfMonth, isSameDay } from "date-fns";
 import { formatDateString } from "~/lib/dates";
 
 type Entry = {
@@ -45,6 +45,8 @@ interface MonthlyStats {
   total: number;
   daysTracked: number;
   daysMissed: number;
+  isTodayGoalMet: boolean;
+  isCurrentMonth: boolean;
   average: number;
   bestDay: { date: string; value: number } | null;
   entries: Entry[];
@@ -130,6 +132,13 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   // Calculate total days in the month
   const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
 
+  // Calculate days left to end of month (including today) for current month
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
+  const daysLeftToEndOfMonth = isCurrentMonth
+    ? totalDaysInMonth - now.getDate()
+    : 0;
+  const daysPassed = Math.max(totalDaysInMonth - daysLeftToEndOfMonth, 0);
+
   const stats: MonthlyStats[] = [];
 
   for (const tracker of trackers) {
@@ -143,14 +152,33 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     const total = entries.reduce((sum, entry) => sum + entry.value, 0);
     const daysTracked = new Set(entries.map((e) => e.date)).size;
-    const daysMissed = totalDaysInMonth - daysTracked;
-    const average = daysTracked ? total / daysTracked : 0;
 
-    // Find best day
+    // Calculate daily totals
     const dailyTotals = entries.reduce((acc, entry) => {
       acc[entry.date] = (acc[entry.date] || 0) + entry.value;
       return acc;
     }, {} as Record<string, number>);
+
+    // Calculate days missed based on whether tracker has a goal
+    let daysMissed: number;
+    if (tracker.goal) {
+      // For trackers with goals: count days where goal wasn't met
+      daysMissed = Object.values(dailyTotals).filter(
+        (dailyTotal) => dailyTotal < tracker.goal!
+      ).length;
+    } else {
+      // For trackers without goals: count days not tracked (excluding future days)
+      daysMissed = Math.max(
+        0,
+        totalDaysInMonth - daysTracked - daysLeftToEndOfMonth
+      );
+    }
+
+    const todayTotal = dailyTotals[formatDateString(new Date())];
+    const isTodayGoalMet = tracker.goal
+      ? todayTotal >= tracker.goal
+      : !!todayTotal;
+    const average = daysPassed ? total / daysPassed : total;
 
     const bestDay = Object.entries(dailyTotals).reduce(
       (best, [date, value]) => {
@@ -167,6 +195,8 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       total,
       daysTracked,
       daysMissed,
+      isTodayGoalMet,
+      isCurrentMonth,
       average,
       bestDay,
       entries,
@@ -477,8 +507,15 @@ export default function MonthlyRecap() {
                   </div>
 
                   <div className="bg-black/20 rounded-xl p-4">
-                    <div className="text-3xl font-bold">{stat.daysMissed}</div>
-                    <div className="text-sm opacity-90 mt-1">Days Missed</div>
+                    <div className="text-3xl font-bold">
+                      {stat.daysMissed}
+                      {!stat.isTodayGoalMet && stat.isCurrentMonth && (
+                        <span className="text-base opacity-70"> (+ today)</span>
+                      )}
+                    </div>
+                    <div className="text-sm opacity-90 mt-1">
+                      {stat.tracker.goal ? "Days Goal Missed" : "Days Missed"}
+                    </div>
                   </div>
 
                   {stat.bestDay && stat.tracker.type !== "checkbox" && (
