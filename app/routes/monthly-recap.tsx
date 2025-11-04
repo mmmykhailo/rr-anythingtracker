@@ -141,12 +141,10 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       (entry) => entry.date >= start && entry.date <= end
     );
 
-    if (entries.length === 0) continue;
-
     const total = entries.reduce((sum, entry) => sum + entry.value, 0);
     const daysTracked = new Set(entries.map((e) => e.date)).size;
     const daysMissed = totalDaysInMonth - daysTracked;
-    const average = total / daysTracked;
+    const average = daysTracked ? total / daysTracked : 0;
 
     // Find best day
     const dailyTotals = entries.reduce((acc, entry) => {
