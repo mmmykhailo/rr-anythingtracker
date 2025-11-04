@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.6] - 2025-11-04
+
+### Changes
+
+- make stats more clear on recap page (0661a3f)
+- show trackers with no entries in recap (603045d)
+
+
 ## [1.0.5] - 2025-11-01
 
 ### Changes
