@@ -463,14 +463,16 @@ export default function MonthlyRecap() {
                   }
                 )}
               >
-                {/* Month indicator */}
-                <div className="absolute top-6 right-6 bg-black/30 rounded-lg px-3 py-1 text-sm font-medium">
-                  {MONTH_NAMES[selectedMonth]} {selectedYear}
-                </div>
+                <div className="flex items-start gap-4 justify-between">
+                  <h3 className="text-2xl font-bold mb-4 shrink">
+                    {stat.tracker.title}
+                  </h3>
 
-                <h3 className="text-2xl font-bold mb-4 pr-32">
-                  {stat.tracker.title}
-                </h3>
+                  {/* Month indicator */}
+                  <div className="bg-black/30 rounded-lg px-3 py-1 text-sm font-medium shrink-0">
+                    {MONTH_NAMES[selectedMonth]} {selectedYear}
+                  </div>
+                </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-black/20 rounded-xl p-4">
