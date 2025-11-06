@@ -35,7 +35,7 @@ const DAYS_TO_SHOW = 4;
 
 export async function clientLoader() {
   if (!isOnboardingCompleted()) {
-    throw redirect("/onboarding");
+    throw redirect("/landing");
   }
 
   try {

@@ -50,9 +50,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Meta />
         <Links />
       </head>
-      <body className="dark bg-background min-h-full">
+      <body className="dark bg-background min-h-full overflow-x-hidden">
         <SyncProvider>
-          <div className="root">
+          <div className="root overflow-x-hidden">
             <div className="max-w-md mx-auto px-4 pb-8">{children}</div>
           </div>
           <DevUtils />
