@@ -51,8 +51,8 @@ export default function LandingPage() {
             Achieve Everything
           </h1>
           <p className="text-lg text-muted-foreground max-w-md">
-            Your personal tracking companion for habits, goals, and daily
-            activities. Simple, powerful, and completely private.
+            Your personal tracker for habits, goals, and daily activities.
+            Simple, powerful, and completely private.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 pt-4">
             <Button asChild size="lg" className="text-base">
@@ -85,8 +85,8 @@ export default function LandingPage() {
                 Track Anything You Want
               </CardTitle>
               <CardDescription>
-                Water intake, steps, workouts, reading, meditation - if it's
-                measurable, you can track it
+                Water intake, steps, workouts, reading, meditation or anything
+                else you can think of!
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -103,9 +103,7 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
-                  <span>
-                    Hierarchical trackers (e.g., Beer → Alcohol → Total Drinks)
-                  </span>
+                  <span>Nested trackers (e.g., Beer → Alcohol → Drinks)</span>
                 </li>
               </ul>
             </CardContent>
@@ -144,7 +142,7 @@ export default function LandingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Database className="h-5 w-5 text-purple-500" />
-                Local-First Architecture
+                Local-First Approach
               </CardTitle>
               <CardDescription>
                 Your data lives on your device. No servers, no tracking, no
@@ -160,10 +158,6 @@ export default function LandingPage() {
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
                   <span>Works offline - no internet required</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
-                  <span>Lightning-fast performance</span>
                 </li>
               </ul>
             </CardContent>
@@ -212,7 +206,7 @@ export default function LandingPage() {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
-                  <span>Works on iOS, Android, desktop</span>
+                  <span>Works on iOS, Android and desktop</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
@@ -248,7 +242,7 @@ export default function LandingPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-4 w-4 mt-0.5 text-green-500 shrink-0" />
-                  <span>Add notes and comments to entries</span>
+                  <span>Add notes and tags to entries</span>
                 </li>
               </ul>
             </CardContent>
