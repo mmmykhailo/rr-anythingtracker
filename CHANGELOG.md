@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.8] - 2025-11-06
+
+### Changes
+
+- add basic landing page (#65) (942ab20)
+- refactor monthly recap sharing logic and make the ui more seamless (6875cd5)
+
+
 ## [1.0.7] - 2025-11-04
 
 ### Changes
