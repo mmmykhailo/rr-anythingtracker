@@ -5,6 +5,7 @@ import html2canvas from "html2canvas-pro";
 import { getAllTrackers, getEntryHistory } from "~/lib/db";
 import type { Tracker } from "~/lib/trackers";
 import { formatStoredValue } from "~/lib/number-conversions";
+import { getShowHiddenTrackers } from "~/lib/user-settings";
 import { Button } from "~/components/ui/button";
 import {
   Select,
@@ -127,7 +128,11 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     url.searchParams.get("month") ?? String(now.getMonth())
   );
 
-  const trackers = await getAllTrackers();
+  const allTrackers = await getAllTrackers();
+  const showHiddenTrackers = getShowHiddenTrackers();
+  const trackers = showHiddenTrackers
+    ? allTrackers
+    : allTrackers.filter((t) => !t.isHidden);
 
   const { start, end } = getMonthDateRange(year, month);
 

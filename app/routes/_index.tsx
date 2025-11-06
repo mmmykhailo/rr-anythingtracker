@@ -75,6 +75,8 @@ export default function Home() {
   const [expandedTrackers, setExpandedTrackers] = useState<Set<string>>(
     () => new Set(savedExpandedTrackers)
   );
+
+  // TODO: Investigate why this is necessary
   useEffect(() => {
     const handleStorageChange = () => {
       setShowHiddenTrackers(getShowHiddenTrackers());
@@ -85,6 +87,7 @@ export default function Home() {
       window.removeEventListener("storage", handleStorageChange);
     };
   }, []);
+
   const visibleTrackers = showHiddenTrackers
     ? trackers
     : trackers.filter((t) => !t.isHidden);
