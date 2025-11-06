@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   Cloud,
   Database,
+  GitBranchIcon,
   Lock,
   Smartphone,
   Target,
@@ -21,6 +22,7 @@ import {
 import { Badge } from "~/components/ui/badge";
 import { Separator } from "~/components/ui/separator";
 import Glow from "~/components/ui/glow";
+import { APP_VERSION } from "~/lib/version";
 
 export function meta() {
   return [
@@ -381,10 +383,14 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 px-4 border-t border-border mt-auto">
+      <footer className="py-8 px-4 border-t border-border mt-auto flex flex-col items-center">
         <div className="text-center text-sm text-muted-foreground">
           <p>Made with care for people who value their privacy</p>
         </div>
+
+        <Badge variant="secondary" className="mt-6" title="Current Version">
+          <GitBranchIcon className="h-3 w-3 mr-1" />v{APP_VERSION}
+        </Badge>
       </footer>
     </div>
   );
