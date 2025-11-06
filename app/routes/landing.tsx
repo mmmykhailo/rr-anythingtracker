@@ -20,7 +20,6 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { Badge } from "~/components/ui/badge";
-import { Separator } from "~/components/ui/separator";
 import Glow from "~/components/ui/glow";
 import { APP_VERSION } from "~/lib/version";
 
@@ -147,8 +146,8 @@ export default function LandingPage() {
                 Local-First Approach
               </CardTitle>
               <CardDescription>
-                Your data lives on your device. No servers, no tracking, no
-                privacy concerns.
+                Your data lives only on your device by default. No servers, no
+                tracking, no privacy concerns.
               </CardDescription>
             </CardHeader>
             <CardContent>
