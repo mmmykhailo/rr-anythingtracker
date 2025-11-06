@@ -2,11 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.9] - 2025-11-06
+
+### Changes
+
+- take showHiddenTrackers into account on monthly recap (331a0de)
+- add current version to the landing page (8835ce9)
+- improve typo on landing page (0d68a33)
+
+
 ## [1.0.8] - 2025-11-06
 
 ### Changes
 
-- add basic landing page (#65) (942ab20)
+- add basic landing page (942ab20)
 - refactor monthly recap sharing logic and make the ui more seamless (6875cd5)
 
 
