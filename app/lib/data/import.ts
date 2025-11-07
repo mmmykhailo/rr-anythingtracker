@@ -28,7 +28,6 @@ export async function importData(
  * Clear existing data and replace with imported data
  */
 async function clearAndReplace(exportData: ExportData): Promise<void> {
-  console.log("Clearing existing data...");
   await clearAllData();
 
   if (exportData.lastChangeDate) {
@@ -74,8 +73,7 @@ async function clearAndReplace(exportData: ExportData): Promise<void> {
         entryId: tag.entryId,
         trackerId: tag.trackerId,
         tagName: tag.tagName,
-        tagNameWithOriginalCasing:
-          tag.tagNameWithOriginalCasing || tag.tagName,
+        tagNameWithOriginalCasing: tag.tagNameWithOriginalCasing || tag.tagName,
       });
     }
   }
