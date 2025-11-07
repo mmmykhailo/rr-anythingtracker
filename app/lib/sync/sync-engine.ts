@@ -1,23 +1,24 @@
-import { exportData, importData, validateExportData } from "../data-export";
+import { exportData, importData, validateExportData } from "../data";
 import {
   uploadJsonToGist,
   downloadJsonFromGist,
 } from "../github-gist-sync";
-import { resolveConflict, isFirstTimeSync } from "./conflict-resolver";
 import type { SyncResult } from "./types";
 
 const GIST_FILENAME = "anythingtracker-data.json";
 const GIST_DESCRIPTION = "AnythingTracker backup data";
 
 /**
- * Performs a complete sync operation
+ * Performs a complete bidirectional sync operation
  *
- * This function:
- * 1. Exports local data
- * 2. Downloads remote data from Gist
- * 3. Resolves any conflicts using last-write-wins
- * 4. Either uploads local data or imports remote data
- * 5. Returns the result with status and messages
+ * Strategy: ALWAYS merge at entity level, never choose one database over another
+ * 
+ * Flow:
+ * 1. Export local data
+ * 2. Download remote data from Gist
+ * 3. Merge remote into local (entity-level merge handles conflicts)
+ * 4. Upload merged result back to cloud
+ * 5. Both devices end up with identical merged data
  *
  * @returns Promise<SyncResult> with status, message, and whether data changed
  */
@@ -31,7 +32,7 @@ export async function performSync(): Promise<SyncResult> {
       filename: GIST_FILENAME,
     });
 
-    // Step 3: Handle different scenarios
+    // Step 3: Handle first-time sync (no remote data)
     if (!remoteData) {
       // No remote data exists yet - upload local data
       const uploadSuccess = await uploadJsonToGist(localData, {
@@ -48,7 +49,6 @@ export async function performSync(): Promise<SyncResult> {
         };
       }
 
-      // Save sync time
       const now = new Date();
       localStorage.setItem("last_sync_time", now.toISOString());
 
@@ -70,53 +70,19 @@ export async function performSync(): Promise<SyncResult> {
       };
     }
 
-    // Step 4: Check if this is first-time sync
-    if (isFirstTimeSync(localData)) {
-      // First-time sync - download remote data
-      await importData(remoteData, false);
+    // Step 4: Check if local is empty (first sync on this device)
+    const isFirstTimeSync = localData.trackers.length === 0;
 
-      const now = new Date();
-      localStorage.setItem("last_sync_time", now.toISOString());
+    // Step 5: ALWAYS merge remote into local (bidirectional merge)
+    // importData with merge mode handles entity-level conflict resolution
+    await importData(remoteData, false);
 
-      return {
-        status: "success",
-        message: "Synced",
-        dataChanged: true,
-        timestamp: now,
-      };
-    }
+    // Step 6: Get the merged result
+    const mergedData = await exportData();
 
-    // Step 5: Resolve conflict using last-write-wins
-    const resolution = resolveConflict(localData, remoteData);
-
-    if (resolution === "no-change") {
-      // No changes needed
-      return {
-        status: "success",
-        message: "Synced",
-        dataChanged: false,
-        timestamp: new Date(),
-      };
-    }
-
-    if (resolution === "download") {
-      // Remote is newer - download and merge
-      await importData(remoteData, false);
-
-      const now = new Date();
-      localStorage.setItem("last_sync_time", now.toISOString());
-
-      return {
-        status: "success",
-        message: "Synced",
-        dataChanged: true,
-        timestamp: now,
-      };
-    }
-
-    // resolution === "upload"
-    // Local is newer - upload to cloud
-    const uploadSuccess = await uploadJsonToGist(localData, {
+    // Step 7: Upload merged result back to cloud
+    // This ensures both devices eventually converge to the same state
+    const uploadSuccess = await uploadJsonToGist(mergedData, {
       filename: GIST_FILENAME,
       description: GIST_DESCRIPTION,
     });
@@ -125,8 +91,8 @@ export async function performSync(): Promise<SyncResult> {
       return {
         status: "error",
         message: "Sync failed",
-        dataChanged: false,
-        error: "Failed to upload to cloud",
+        dataChanged: isFirstTimeSync, // Data still changed locally even if upload failed
+        error: "Failed to upload merged data to cloud",
       };
     }
 
@@ -136,7 +102,7 @@ export async function performSync(): Promise<SyncResult> {
     return {
       status: "success",
       message: "Synced",
-      dataChanged: false,
+      dataChanged: isFirstTimeSync, // Only UI refresh needed on first sync
       timestamp: now,
     };
   } catch (error) {

@@ -1,4 +1,4 @@
-import type { ExportData } from "../data-export";
+import type { ExportData } from "../data";
 
 export type SyncStatus = "idle" | "syncing" | "success" | "error";
 
@@ -15,13 +15,4 @@ export interface SyncState {
   message?: string;
   lastSyncTime?: Date;
   lastError?: string;
-}
-
-export type ConflictResolution = "upload" | "download" | "no-change";
-
-export interface ConflictInfo {
-  localData: ExportData;
-  remoteData: ExportData;
-  localChangeDate: Date;
-  remoteChangeDate: Date;
 }

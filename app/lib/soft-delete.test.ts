@@ -12,7 +12,7 @@ import {
   getEntry,
   getDB,
 } from "./db";
-import { exportData, importData, type ExportData } from "./data-export";
+import { exportData, importData, type ExportData } from "./data";
 
 // Mock IndexedDB for testing
 import "fake-indexeddb/auto";
