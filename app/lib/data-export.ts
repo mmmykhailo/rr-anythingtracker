@@ -21,12 +21,14 @@ export interface ExportData {
     isNumber: boolean;
     goal?: number;
     parentId?: string;
+    deletedAt?: string;
     entries: Array<{
       id: string;
       date: string;
       value: number;
       comment?: string;
       createdAt: string;
+      deletedAt?: string;
     }>;
   }>;
   tags: Array<{
@@ -38,11 +40,13 @@ export interface ExportData {
   }>;
 }
 
-// Export all data to JSON
+// Export all data to JSON (including deleted items for sync)
 export async function exportData(): Promise<ExportData> {
-  const trackers = await getAllTrackers();
   const lastChangeDate = await getLastChangeDate();
   const db = await getDB();
+
+  // Get ALL trackers (including deleted ones)
+  const allTrackers = await db.getAll("trackers");
 
   // Get all tags
   const allTags = await db.getAll("entry_tags");
@@ -52,8 +56,10 @@ export async function exportData(): Promise<ExportData> {
     exportDate: new Date().toISOString(),
     lastChangeDate: lastChangeDate?.toISOString(),
     trackers: await Promise.all(
-      trackers.map(async (tracker) => {
-        const entries = await getEntryHistory(tracker.id);
+      allTrackers.map(async (tracker) => {
+        // Get ALL entries for this tracker (including deleted ones)
+        const allEntries = await db.getAllFromIndex("entries", "by-tracker", tracker.id);
+
         return {
           id: tracker.id,
           title: tracker.title,
@@ -61,12 +67,14 @@ export async function exportData(): Promise<ExportData> {
           isNumber: tracker.isNumber,
           goal: tracker.goal,
           parentId: tracker.parentId,
-          entries: entries.map((entry) => ({
+          deletedAt: tracker.deletedAt?.toISOString(),
+          entries: allEntries.map((entry) => ({
             id: entry.id,
             date: entry.date,
             value: entry.value,
             comment: entry.comment,
             createdAt: entry.createdAt.toISOString(),
+            deletedAt: entry.deletedAt?.toISOString(),
           })),
         };
       })
@@ -105,20 +113,22 @@ export async function importData(
           isNumber: trackerData.isNumber,
           goal: trackerData.goal,
           parentId: trackerData.parentId,
+          deletedAt: trackerData.deletedAt ? new Date(trackerData.deletedAt) : undefined,
         },
         true
       );
 
       for (const entry of trackerData.entries) {
-        await createEntryWithId(
-          entry.id,
-          trackerData.id,
-          entry.date,
-          entry.value,
-          new Date(entry.createdAt),
-          true,
-          entry.comment
-        );
+        const db = await getDB();
+        await db.put("entries", {
+          id: entry.id,
+          trackerId: trackerData.id,
+          date: entry.date,
+          value: entry.value,
+          comment: entry.comment,
+          createdAt: new Date(entry.createdAt),
+          deletedAt: entry.deletedAt ? new Date(entry.deletedAt) : undefined,
+        });
       }
     }
 
@@ -161,11 +171,16 @@ async function mergeImportData(exportData: ExportData): Promise<void> {
     const existingTracker = await db.get("trackers", trackerData.id);
 
     if (existingTracker) {
-      // Update only title and goal for existing trackers
+      // Update tracker - handle deletedAt logic
+      // If remote has deletedAt, set it locally (deletion should sync)
+      // If local already has deletedAt, keep it (don't resurrect)
       const updatedTracker = {
         ...existingTracker,
         title: trackerData.title,
         goal: trackerData.goal,
+        deletedAt: trackerData.deletedAt
+          ? new Date(trackerData.deletedAt)
+          : existingTracker.deletedAt, // Keep existing deletedAt if present
       };
       await db.put("trackers", updatedTracker);
     } else {
@@ -178,6 +193,7 @@ async function mergeImportData(exportData: ExportData): Promise<void> {
           isNumber: trackerData.isNumber,
           goal: trackerData.goal,
           parentId: trackerData.parentId,
+          deletedAt: trackerData.deletedAt ? new Date(trackerData.deletedAt) : undefined,
         },
         true
       );
@@ -191,30 +207,36 @@ async function mergeImportData(exportData: ExportData): Promise<void> {
         const existingCreatedAt = new Date(existingEntry.createdAt);
         const importedCreatedAt = new Date(entry.createdAt);
 
-        // Keep the newer entry
+        // Keep the newer entry, and handle deletedAt
         if (importedCreatedAt > existingCreatedAt) {
-          await createEntryWithId(
-            entry.id,
-            trackerData.id,
-            entry.date,
-            entry.value,
-            importedCreatedAt,
-            true,
-            entry.comment
-          );
+          await db.put("entries", {
+            id: entry.id,
+            trackerId: trackerData.id,
+            date: entry.date,
+            value: entry.value,
+            comment: entry.comment,
+            createdAt: importedCreatedAt,
+            deletedAt: entry.deletedAt ? new Date(entry.deletedAt) : undefined,
+          });
+        } else {
+          // Existing is newer, but still check if we need to sync deletedAt
+          if (entry.deletedAt && !existingEntry.deletedAt) {
+            // Remote has deletion, apply it locally
+            existingEntry.deletedAt = new Date(entry.deletedAt);
+            await db.put("entries", existingEntry);
+          }
         }
-        // If existing is newer or equal, keep it (do nothing)
       } else {
         // Create new entry if it doesn't exist
-        await createEntryWithId(
-          entry.id,
-          trackerData.id,
-          entry.date,
-          entry.value,
-          new Date(entry.createdAt),
-          true,
-          entry.comment
-        );
+        await db.put("entries", {
+          id: entry.id,
+          trackerId: trackerData.id,
+          date: entry.date,
+          value: entry.value,
+          comment: entry.comment,
+          createdAt: new Date(entry.createdAt),
+          deletedAt: entry.deletedAt ? new Date(entry.deletedAt) : undefined,
+        });
       }
     }
   }

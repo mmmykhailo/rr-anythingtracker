@@ -18,6 +18,7 @@ interface AnythingTrackerDB extends DBSchema {
       value: number;
       comment?: string;
       createdAt: Date;
+      deletedAt?: Date;
     };
     indexes: {
       "by-tracker": string;
@@ -50,7 +51,7 @@ interface AnythingTrackerDB extends DBSchema {
 }
 
 const DB_NAME = "AnythingTrackerDB";
-const DB_VERSION = 6;
+const DB_VERSION = 7;
 
 let dbInstance: IDBPDatabase<AnythingTrackerDB> | null = null;
 
@@ -271,8 +272,11 @@ export async function getAllTrackers(): Promise<Tracker[]> {
   const db = await getDB();
   const trackers = await db.getAll("trackers");
 
-  // Populate values from entries
-  for (const tracker of trackers) {
+  // Filter out deleted trackers
+  const activeTrackers = trackers.filter(t => !t.deletedAt);
+
+  // Populate values from entries (excluding deleted entries)
+  for (const tracker of activeTrackers) {
     const entries = await db.getAllFromIndex(
       "entries",
       "by-tracker",
@@ -281,29 +285,35 @@ export async function getAllTrackers(): Promise<Tracker[]> {
     tracker.values = {};
 
     for (const entry of entries) {
-      tracker.values[entry.date] =
-        (tracker.values[entry.date] || 0) + entry.value;
+      // Skip deleted entries
+      if (!entry.deletedAt) {
+        tracker.values[entry.date] =
+          (tracker.values[entry.date] || 0) + entry.value;
+      }
     }
   }
 
-  return trackers;
+  return activeTrackers;
 }
 
 export async function getTrackerById(id: string): Promise<Tracker | null> {
   const db = await getDB();
   const tracker = await db.get("trackers", id);
 
-  if (!tracker) {
+  if (!tracker || tracker.deletedAt) {
     return null;
   }
 
-  // Populate values from entries
+  // Populate values from entries (excluding deleted entries)
   const entries = await db.getAllFromIndex("entries", "by-tracker", id);
   tracker.values = {};
 
   for (const entry of entries) {
-    tracker.values[entry.date] =
-      (tracker.values[entry.date] || 0) + entry.value;
+    // Skip deleted entries
+    if (!entry.deletedAt) {
+      tracker.values[entry.date] =
+        (tracker.values[entry.date] || 0) + entry.value;
+    }
   }
 
   return tracker;
@@ -313,18 +323,24 @@ export async function deleteTracker(id: string): Promise<void> {
   const db = await getDB();
   const tx = db.transaction(["trackers", "entries", "entry_tags"], "readwrite");
 
-  // Delete tracker
-  await tx.objectStore("trackers").delete(id);
+  // Soft delete tracker by setting deletedAt
+  const tracker = await tx.objectStore("trackers").get(id);
+  if (tracker) {
+    tracker.deletedAt = new Date();
+    await tx.objectStore("trackers").put(tracker);
+  }
 
-  // Delete all entries for this tracker
+  // Soft delete all entries for this tracker
   const entries = await tx
     .objectStore("entries")
     .index("by-tracker")
-    .getAllKeys(id);
-  for (const entryKey of entries) {
-    await tx.objectStore("entries").delete(entryKey);
+    .getAll(id);
+  for (const entry of entries) {
+    entry.deletedAt = new Date();
+    await tx.objectStore("entries").put(entry);
   }
 
+  // Hard delete tags (they don't need soft delete)
   const tags = await tx
     .objectStore("entry_tags")
     .index("by-tracker")
@@ -346,7 +362,7 @@ export async function getTotalValueForDate(
   const entries = await db.getAllFromIndex("entries", "by-tracker", trackerId);
 
   return entries
-    .filter((entry) => entry.date === date)
+    .filter((entry) => entry.date === date && !entry.deletedAt)
     .reduce((sum, entry) => sum + entry.value, 0);
 }
 
@@ -364,7 +380,7 @@ export async function saveEntry(
   // Get current total for this date
   const currentTotal = await getTotalValueForDate(trackerId, date);
 
-  // Delete all existing entries for this date
+  // Delete all existing non-deleted entries for this date
   const existingEntries = await db.getAllFromIndex(
     "entries",
     "by-tracker-date",
@@ -372,10 +388,13 @@ export async function saveEntry(
   );
 
   for (const entry of existingEntries) {
-    await db.delete("entries", entry.id);
-    await deleteEntryTags(entry.id);
-    if (!skipDateUpdate) {
-      await setLastChangeDate();
+    // Only hard delete non-deleted entries (skip already deleted ones)
+    if (!entry.deletedAt) {
+      await db.delete("entries", entry.id);
+      await deleteEntryTags(entry.id);
+      if (!skipDateUpdate) {
+        await setLastChangeDate();
+      }
     }
   }
 
@@ -433,7 +452,9 @@ export async function getEntry(
     trackerId,
     date,
   ]);
-  return entries.reduce((sum, entry) => sum + entry.value, 0);
+  return entries
+    .filter((entry) => !entry.deletedAt)
+    .reduce((sum, entry) => sum + entry.value, 0);
 }
 
 export async function addToEntry(
@@ -476,9 +497,15 @@ export async function deleteEntry(
   ]);
 
   for (const entry of entries) {
-    await db.delete("entries", entry.id);
-    await deleteEntryTags(entry.id);
+    // Only soft delete non-deleted entries
+    if (!entry.deletedAt) {
+      entry.deletedAt = new Date();
+      await db.put("entries", entry);
+      // Hard delete tags
+      await deleteEntryTags(entry.id);
+    }
   }
+  await setLastChangeDate();
 }
 
 // Get entry history for a tracker
@@ -498,12 +525,15 @@ export async function getEntryHistory(
   const db = await getDB();
   const entries = await db.getAllFromIndex("entries", "by-tracker", trackerId);
 
+  // Filter out deleted entries
+  const activeEntries = entries.filter(entry => !entry.deletedAt);
+
   // Sort by createdAt descending (most recent first)
-  entries.sort(
+  activeEntries.sort(
     (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 
-  return limit ? entries.slice(0, limit) : entries;
+  return limit ? activeEntries.slice(0, limit) : activeEntries;
 }
 
 // Create individual entry (for tracking separate additions)
@@ -572,7 +602,13 @@ export async function createEntryWithId(
 // Delete entry by ID (for history management)
 export async function deleteEntryById(entryId: string): Promise<void> {
   const db = await getDB();
-  await db.delete("entries", entryId);
+  const entry = await db.get("entries", entryId);
+  if (entry) {
+    // Soft delete entry by setting deletedAt
+    entry.deletedAt = new Date();
+    await db.put("entries", entry);
+  }
+  // Hard delete tags
   await deleteEntryTags(entryId);
   await setLastChangeDate();
 }

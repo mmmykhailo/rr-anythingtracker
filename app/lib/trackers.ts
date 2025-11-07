@@ -20,4 +20,5 @@ export type Tracker = {
   goal?: number;
   parentId?: string;
   isHidden?: boolean;
+  deletedAt?: Date;
 };
