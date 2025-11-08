@@ -104,17 +104,12 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     // Get all entries for the tracker
     const allEntries = await getEntryHistory(tracker.id);
 
-    // Filter entries by date range
-    const entries = allEntries.filter(
-      (entry) => entry.date >= start && entry.date <= end
-    );
-
-    // Calculate all stats in a single pass
+    // Calculate all stats using ALL entries (streaks calculated from full history)
     const fromDate = new Date(year, month, 1);
     const toDate = endOfMonth(fromDate);
 
     const calculatedStats = calculateUnifiedStats(
-      entries,
+      allEntries,
       { fromDate, toDate },
       tracker.goal,
       {
@@ -127,6 +122,11 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
         includeStreaks: true,
         includeTodayGoalMet: true,
       }
+    );
+
+    // Filter entries for display purposes
+    const entries = allEntries.filter(
+      (entry) => entry.date >= start && entry.date <= end
     );
 
     stats.push({

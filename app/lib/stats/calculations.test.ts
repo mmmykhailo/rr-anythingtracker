@@ -234,26 +234,33 @@ describe("Stats Calculations", () => {
   });
 
   describe("General Streaks", () => {
-    test("calculates longest streak correctly", () => {
+    test("calculates longest streak correctly from full history", () => {
+      const fiveDaysAgo = subDays(today, 5);
+      const fourDaysAgo = subDays(today, 4);
+      const threeDaysAgo = subDays(today, 3);
+      const yesterday = subDays(today, 1);
+
       const entries = [
-        { date: "2024-01-01", value: 100 },
-        { date: "2024-01-02", value: 100 },
-        { date: "2024-01-03", value: 100 },
-        { date: "2024-01-05", value: 100 }, // Gap here
-        { date: "2024-01-06", value: 100 },
+        { date: formatDateString(fiveDaysAgo), value: 100 },
+        { date: formatDateString(fourDaysAgo), value: 100 },
+        { date: formatDateString(threeDaysAgo), value: 100 },
+        // Gap here (2 days ago is missing)
+        { date: formatDateString(yesterday), value: 100 },
+        { date: todayStr, value: 100 },
       ];
 
       const result = calculateStats(
         entries,
         {
-          fromDate: new Date("2024-01-01"),
-          toDate: new Date("2024-01-06"),
+          fromDate: fiveDaysAgo,
+          toDate: today,
         },
         undefined,
         { includeStreaks: true }
       );
 
-      expect(result.longestStreak).toBe(3); // Days 1-3
+      expect(result.longestStreak).toBe(3); // Days 5-4-3 ago
+      expect(result.currentStreak).toBe(2); // Yesterday and today
     });
 
     test("calculates current streak when active", () => {
@@ -282,41 +289,87 @@ describe("Stats Calculations", () => {
     });
 
     test("current streak is 0 when streak is broken", () => {
+      const fiveDaysAgo = subDays(today, 5);
+      const fourDaysAgo = subDays(today, 4);
+      const threeDaysAgo = subDays(today, 3);
+
       const entries = [
-        { date: "2024-01-01", value: 100 },
-        { date: "2024-01-02", value: 100 },
-        { date: "2024-01-03", value: 100 },
-        // Gap at the end - streak broken
+        { date: formatDateString(fiveDaysAgo), value: 100 },
+        { date: formatDateString(fourDaysAgo), value: 100 },
+        { date: formatDateString(threeDaysAgo), value: 100 },
+        // Gap at the end - streak broken (no entries yesterday or today)
       ];
 
       const result = calculateStats(
         entries,
         {
-          fromDate: new Date("2024-01-01"),
-          toDate: new Date("2024-01-05"),
+          fromDate: fiveDaysAgo,
+          toDate: today,
         },
         undefined,
         { includeStreaks: true }
       );
 
-      expect(result.currentStreak).toBe(0);
+      expect(result.longestStreak).toBe(3); // 3 consecutive days in the past
+      expect(result.currentStreak).toBe(0); // Streak broken - no recent entries
     });
 
     test("handles single entry streak", () => {
-      const entries = [{ date: "2024-01-03", value: 100 }];
+      const fiveDaysAgo = subDays(today, 5);
+      const threeDaysAgo = subDays(today, 3);
+
+      const entries = [{ date: formatDateString(threeDaysAgo), value: 100 }];
 
       const result = calculateStats(
         entries,
         {
-          fromDate: new Date("2024-01-01"),
-          toDate: new Date("2024-01-05"),
+          fromDate: fiveDaysAgo,
+          toDate: today,
         },
         undefined,
         { includeStreaks: true }
       );
 
       expect(result.longestStreak).toBe(1);
-      expect(result.currentStreak).toBe(0); // Streak broken after day 3
+      expect(result.currentStreak).toBe(0); // Streak broken after 3 days ago
+    });
+
+    test("calculates streaks from full history even when viewing limited period", () => {
+      // This test demonstrates the key feature: streaks calculated from ALL entries,
+      // not just those in the selected viewing period
+      const tenDaysAgo = subDays(today, 10);
+      const nineDaysAgo = subDays(today, 9);
+      const eightDaysAgo = subDays(today, 8);
+      const threeDaysAgo = subDays(today, 3);
+      const twoDaysAgo = subDays(today, 2);
+      const yesterday = subDays(today, 1);
+
+      // Full history has entries from 10 days ago
+      const allEntries = [
+        { date: formatDateString(tenDaysAgo), value: 100 },
+        { date: formatDateString(nineDaysAgo), value: 100 },
+        { date: formatDateString(eightDaysAgo), value: 100 },
+        // Gap of several days
+        { date: formatDateString(threeDaysAgo), value: 100 },
+        { date: formatDateString(twoDaysAgo), value: 100 },
+        { date: formatDateString(yesterday), value: 100 },
+        { date: todayStr, value: 100 },
+      ];
+
+      // But we're only viewing the last 3 days
+      const result = calculateStats(
+        allEntries,
+        {
+          fromDate: threeDaysAgo,
+          toDate: today,
+        },
+        undefined,
+        { includeStreaks: true }
+      );
+
+      // Longest streak should be 4 (last 4 days), not 3 from the limited period
+      expect(result.longestStreak).toBe(4); // 3 days ago through today
+      expect(result.currentStreak).toBe(4); // Currently on a 4-day streak
     });
   });
 
@@ -701,12 +754,18 @@ describe("Stats Calculations", () => {
 
   describe("Complex Scenarios", () => {
     test("calculates all stats together correctly", () => {
+      const fiveDaysAgo = subDays(today, 5);
+      const fourDaysAgo = subDays(today, 4);
+      const threeDaysAgo = subDays(today, 3);
+      const twoDaysAgo = subDays(today, 2);
+      const yesterday = subDays(today, 1);
+
       const entries = [
-        { date: "2024-01-01", value: 150 },
-        { date: "2024-01-02", value: 200 },
-        { date: "2024-01-03", value: 50 },
-        { date: "2024-01-04", value: 300 },
-        { date: "2024-01-05", value: 100 },
+        { date: formatDateString(fiveDaysAgo), value: 150 },
+        { date: formatDateString(fourDaysAgo), value: 200 },
+        { date: formatDateString(threeDaysAgo), value: 50 },
+        { date: formatDateString(twoDaysAgo), value: 300 },
+        { date: formatDateString(yesterday), value: 100 },
       ];
 
       const config: StatsConfig = {
@@ -726,8 +785,8 @@ describe("Stats Calculations", () => {
       const result = calculateStats(
         entries,
         {
-          fromDate: new Date("2024-01-01"),
-          toDate: new Date("2024-01-05"),
+          fromDate: fiveDaysAgo,
+          toDate: yesterday,
         },
         100,
         config
@@ -738,9 +797,12 @@ describe("Stats Calculations", () => {
       expect(result.daysTracked).toBe(5);
       expect(result.daysMissed).toBe(1); // Day 3 didn't meet goal
       expect(result.percentageDaysTracked).toBe(100);
-      expect(result.bestDay).toEqual({ date: "2024-01-04", value: 300 });
+      expect(result.bestDay).toEqual({
+        date: formatDateString(twoDaysAgo),
+        value: 300,
+      });
       expect(result.longestStreak).toBe(5);
-      expect(result.currentStreak).toBe(5);
+      expect(result.currentStreak).toBe(0); // Streak broken (no entry today)
       expect(result.longestGoalStreak).toBe(2); // Days 1-2 or 4-5
       expect(result.currentGoalStreak).toBe(2); // Days 4-5
       expect(result.missedGoalDays).toBe(1); // Day 3
@@ -748,17 +810,21 @@ describe("Stats Calculations", () => {
     });
 
     test("handles sparse entries with gaps", () => {
+      const tenDaysAgo = subDays(today, 10);
+      const sixDaysAgo = subDays(today, 6);
+      const yesterday = subDays(today, 1);
+
       const entries = [
-        { date: "2024-01-01", value: 100 },
-        { date: "2024-01-05", value: 200 },
-        { date: "2024-01-10", value: 150 },
+        { date: formatDateString(tenDaysAgo), value: 100 },
+        { date: formatDateString(sixDaysAgo), value: 200 },
+        { date: formatDateString(yesterday), value: 150 },
       ];
 
       const result = calculateStats(
         entries,
         {
-          fromDate: new Date("2024-01-01"),
-          toDate: new Date("2024-01-10"),
+          fromDate: tenDaysAgo,
+          toDate: yesterday,
         },
         undefined,
         {
@@ -773,7 +839,7 @@ describe("Stats Calculations", () => {
       expect(result.daysMissed).toBe(7); // 10 days - 3 tracked
       expect(result.percentageDaysTracked).toBe(30); // 3/10 = 30%
       expect(result.longestStreak).toBe(1);
-      expect(result.currentStreak).toBe(1);
+      expect(result.currentStreak).toBe(0); // Streak broken (no entry today)
     });
   });
 });

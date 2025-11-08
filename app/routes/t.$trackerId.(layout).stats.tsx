@@ -42,13 +42,9 @@ export async function clientLoader({
     }
     const allEntries = await getEntryHistory(trackerId);
 
-    const entries = allEntries.filter((entry) => {
-      const entryDate = new Date(entry.date);
-      return entryDate >= fromDate && entryDate <= toDate;
-    });
-
+    // Calculate stats using ALL entries (streaks calculated from full history)
     const stats = calculateUnifiedStats(
-      entries,
+      allEntries,
       { fromDate, toDate },
       tracker.goal,
       {
@@ -59,6 +55,12 @@ export async function clientLoader({
         includeConsistencyScore: true,
       }
     );
+
+    // Filter entries for charts display
+    const entries = allEntries.filter((entry) => {
+      const entryDate = new Date(entry.date);
+      return entryDate >= fromDate && entryDate <= toDate;
+    });
 
     return {
       tracker,

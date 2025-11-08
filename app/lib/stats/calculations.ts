@@ -52,8 +52,11 @@ export interface StatsResult {
 /**
  * Unified stats calculation function optimized for single-pass processing.
  *
- * @param entries - Array of entries with date and value
- * @param dates - Object containing fromDate and toDate
+ * NOTE: Streaks are calculated across the FULL entry history, not just the selected period.
+ * All other stats (total, average, etc.) are calculated only for the selected period.
+ *
+ * @param entries - Array of ALL entries (not filtered by date range)
+ * @param dates - Object containing fromDate and toDate for the selected period
  * @param goalValue - Optional goal value for goal-based calculations
  * @param config - Configuration object specifying which stats to calculate
  * @returns Stats object with only the requested calculations
@@ -70,15 +73,37 @@ export function calculateStats(
   // Determine if this is the current period
   const now = startOfDay(new Date());
   const isCurrentPeriod = isAfter(toDate, now) || isSameDay(toDate, now);
+  const today = formatDateString(now);
 
-  // Step 1: Build daily totals map (single pass through entries)
-  const dailyTotals = new Map<string, number>();
+  // Step 1: Build daily totals map for ALL entries
+  const allDailyTotals = new Map<string, number>();
+  let earliestDate: Date | null = null;
+  let latestDate: Date | null = null;
+
   for (const entry of entries) {
-    const current = dailyTotals.get(entry.date) || 0;
-    dailyTotals.set(entry.date, current + entry.value);
+    const current = allDailyTotals.get(entry.date) || 0;
+    allDailyTotals.set(entry.date, current + entry.value);
+
+    const entryDate = new Date(entry.date);
+    if (!earliestDate || entryDate < earliestDate) {
+      earliestDate = entryDate;
+    }
+    if (!latestDate || entryDate > latestDate) {
+      latestDate = entryDate;
+    }
   }
 
-  // Step 2: Build full date range
+  // Step 2: Build daily totals for entries within the selected range
+  const rangeDailyTotals = new Map<string, number>();
+  for (const entry of entries) {
+    const entryDate = new Date(entry.date);
+    if (entryDate >= fromDate && entryDate <= toDate) {
+      const current = rangeDailyTotals.get(entry.date) || 0;
+      rangeDailyTotals.set(entry.date, current + entry.value);
+    }
+  }
+
+  // Step 3: Build date range for selected period
   const dateRange: string[] = [];
   const current = new Date(fromDate);
   while (current <= toDate) {
@@ -87,7 +112,6 @@ export function calculateStats(
   }
 
   const totalDays = dateRange.length;
-  const today = formatDateString(now);
   const todayInRange = dateRange.includes(today);
 
   // Calculate days left to end of period (for current period only)
@@ -96,17 +120,49 @@ export function calculateStats(
     : 0;
   const daysPassed = totalDays - daysLeftToEndOfPeriod;
 
-  // Step 3: Single pass through date range to calculate all stats
+  // Step 4: Calculate general streaks from FULL history
+  let longestStreak = 0;
+  let currentStreakValue = 0;
+
+  if (config.includeStreaks && earliestDate) {
+    // Build full date range from earliest entry to today
+    const streakDateRange: string[] = [];
+    const streakCurrent = new Date(earliestDate);
+    const streakEnd = now > latestDate! ? now : latestDate!;
+
+    while (streakCurrent <= streakEnd) {
+      streakDateRange.push(formatDateString(streakCurrent));
+      streakCurrent.setDate(streakCurrent.getDate() + 1);
+    }
+
+    // Calculate streaks across full history
+    let tempStreak = 0;
+    let lastStreakIndex = -1;
+
+    for (let i = 0; i < streakDateRange.length; i++) {
+      const dateStr = streakDateRange[i];
+      const hasEntry = allDailyTotals.has(dateStr);
+
+      if (hasEntry) {
+        tempStreak++;
+        longestStreak = Math.max(longestStreak, tempStreak);
+        lastStreakIndex = i;
+      } else {
+        tempStreak = 0;
+      }
+    }
+
+    // Current streak: only if it extends to the end of the range
+    if (lastStreakIndex === streakDateRange.length - 1) {
+      currentStreakValue = tempStreak;
+    }
+  }
+
+  // Step 5: Calculate other stats from selected period
   let total = 0;
   let daysTracked = 0;
   let bestDayDate: string | null = null;
   let bestDayValue = 0;
-
-  // Streak tracking
-  let longestStreak = 0;
-  let tempStreak = 0;
-  let currentStreakValue = 0;
-  let lastTrackedIndex = -1;
 
   // Goal streak tracking
   let currentGoalStreak = 0;
@@ -116,11 +172,11 @@ export function calculateStats(
   let goalMetDays = 0;
   let firstTrackedIndex = -1;
 
-  // Process each day in the range
+  // Process each day in the selected range
   for (let i = 0; i < dateRange.length; i++) {
     const dateStr = dateRange[i];
-    const dailyValue = dailyTotals.get(dateStr) || 0;
-    const hasEntry = dailyTotals.has(dateStr);
+    const dailyValue = rangeDailyTotals.get(dateStr) || 0;
+    const hasEntry = rangeDailyTotals.has(dateStr);
 
     // Basic stats calculations
     if (config.includeTotal || config.includeAverage) {
@@ -144,17 +200,6 @@ export function calculateStats(
     if (config.includeBestDay && dailyValue > bestDayValue) {
       bestDayValue = dailyValue;
       bestDayDate = dateStr;
-    }
-
-    // General streak calculations (consecutive days with entries)
-    if (config.includeStreaks) {
-      if (hasEntry) {
-        tempStreak++;
-        longestStreak = Math.max(longestStreak, tempStreak);
-        lastTrackedIndex = i;
-      } else {
-        tempStreak = 0;
-      }
     }
 
     // Goal-based calculations
@@ -190,16 +235,7 @@ export function calculateStats(
     }
   }
 
-  // Calculate current streak (needs to check if it extends to the most recent entry)
-  if (config.includeStreaks && lastTrackedIndex !== -1) {
-    currentStreakValue = tempStreak;
-    // If the last tracked day is not at the end of the streak, current streak is 0
-    if (lastTrackedIndex < dateRange.length - 1 - tempStreak + 1) {
-      currentStreakValue = 0;
-    }
-  }
-
-  // Step 4: Populate result object with requested stats
+  // Step 6: Populate result object with requested stats
   if (config.includeTotal) {
     result.total = total;
   }
@@ -259,7 +295,7 @@ export function calculateStats(
   }
 
   if (config.includeTodayGoalMet) {
-    const todayTotal = dailyTotals.get(today) || 0;
+    const todayTotal = rangeDailyTotals.get(today) || 0;
     result.isTodayGoalMet = goalValue
       ? todayTotal >= goalValue
       : todayTotal > 0;
