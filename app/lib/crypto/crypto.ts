@@ -90,8 +90,9 @@ export async function encryptData(
     // Convert to base64 for storage
     return btoa(String.fromCharCode(...combined));
   } catch (error) {
-    console.error("Encryption failed:", error);
-    throw new Error("Failed to encrypt data");
+    throw new Error("Failed to encrypt data", {
+      cause: error,
+    });
   }
 }
 
@@ -140,9 +141,11 @@ export async function decryptData(
     const decoder = new TextDecoder();
     return decoder.decode(decrypted);
   } catch (error) {
-    console.error("Decryption failed:", error);
     throw new Error(
-      "Failed to decrypt data. Invalid password or corrupted data."
+      "Failed to decrypt data. Invalid password or corrupted data.",
+      {
+        cause: error,
+      }
     );
   }
 }
