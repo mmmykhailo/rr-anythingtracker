@@ -28,7 +28,7 @@ import { Separator } from "~/components/ui/separator";
 import { exportAllData } from "~/lib/data-operations";
 import { importData, validateExportData } from "~/lib/data";
 import { debouncedDataChange } from "~/lib/data-change-events";
-import { DevUtils } from "~/components/dev-utils";
+import { DevUtils } from "~/components/settings/dev-utils";
 import { isSyncConfigured } from "~/lib/github-gist-sync";
 import {
   getShowHiddenTrackers,
