@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from "~/components/ui/card";
 import { PeriodSelector } from "~/components/tracker/stats/PeriodSelector";
-import { getSelectedPeriod, calculateStats } from "~/lib/stats";
+import { getSelectedPeriod, calculateUnifiedStats } from "~/lib/stats";
 import { toDisplayValue } from "~/lib/number-conversions";
 import { startOfToday, differenceInDays } from "date-fns";
 
@@ -47,7 +47,18 @@ export async function clientLoader({
       return entryDate >= fromDate && entryDate <= toDate;
     });
 
-    const stats = calculateStats(entries, fromDate, toDate, tracker.goal);
+    const stats = calculateUnifiedStats(
+      entries,
+      { fromDate, toDate },
+      tracker.goal,
+      {
+        includeTotal: true,
+        includeAverage: true,
+        includeGoalStreaks: true,
+        includeMissedGoalDays: true,
+        includeConsistencyScore: true,
+      }
+    );
 
     return {
       tracker,
@@ -144,7 +155,7 @@ export default function TrackerChartsPage() {
           <CardHeader>
             <CardDescription>Total</CardDescription>
             <CardTitle className="text-2xl">
-              {formatValue(stats.totalTracked)}
+              {formatValue(stats.total ?? 0)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -152,7 +163,7 @@ export default function TrackerChartsPage() {
           <CardHeader>
             <CardDescription>Average</CardDescription>
             <CardTitle className="text-2xl">
-              {formatValue(stats.averagePerDay)}
+              {formatValue(stats.average ?? 0)}
             </CardTitle>
           </CardHeader>
         </Card>
@@ -195,8 +206,8 @@ export default function TrackerChartsPage() {
             <CardHeader>
               <CardDescription>Current goal streak</CardDescription>
               <CardTitle className="text-2xl">
-                {stats.currentGoalStreak}{" "}
-                {stats.currentGoalStreak === 1 ? "day" : "days"}
+                {stats.currentGoalStreak ?? 0}{" "}
+                {(stats.currentGoalStreak ?? 0) === 1 ? "day" : "days"}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -204,8 +215,8 @@ export default function TrackerChartsPage() {
             <CardHeader>
               <CardDescription>Longest goal streak</CardDescription>
               <CardTitle className="text-2xl">
-                {stats.longestGoalStreak}{" "}
-                {stats.longestGoalStreak === 1 ? "day" : "days"}
+                {stats.longestGoalStreak ?? 0}{" "}
+                {(stats.longestGoalStreak ?? 0) === 1 ? "day" : "days"}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -213,8 +224,8 @@ export default function TrackerChartsPage() {
             <CardHeader>
               <CardDescription>Missed goal days</CardDescription>
               <CardTitle className="text-2xl">
-                {stats.missedGoalDays}{" "}
-                {stats.missedGoalDays === 1 ? "day" : "days"}
+                {stats.missedGoalDays ?? 0}{" "}
+                {(stats.missedGoalDays ?? 0) === 1 ? "day" : "days"}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -222,7 +233,7 @@ export default function TrackerChartsPage() {
             <CardHeader>
               <CardDescription>Consistency score</CardDescription>
               <CardTitle className="text-2xl">
-                {stats.consistencyScore}%
+                {stats.consistencyScore ?? 0}%
               </CardTitle>
             </CardHeader>
           </Card>

@@ -6,6 +6,7 @@ import { getAllTrackers, getEntryHistory } from "~/lib/db";
 import type { Tracker } from "~/lib/trackers";
 import { formatStoredValue } from "~/lib/number-conversions";
 import { getShowHiddenTrackers } from "~/lib/user-settings";
+import { calculateUnifiedStats } from "~/lib/stats";
 import { Button } from "~/components/ui/button";
 import {
   Select,
@@ -52,6 +53,8 @@ interface MonthlyStats {
   average: number;
   percentageDaysTracked: number;
   bestDay: { date: string; value: number } | null;
+  longestStreak: number;
+  currentStreak: number;
   entries: Entry[];
 }
 
@@ -63,57 +66,6 @@ function getMonthDateRange(year: number, month: number) {
     start: formatDateString(start),
     end: formatDateString(end),
   };
-}
-
-function calculateStreaks(entries: Entry[]): {
-  longestStreak: number;
-  currentStreak: number;
-} {
-  if (entries.length === 0) return { longestStreak: 0, currentStreak: 0 };
-
-  // Get unique dates and sort them
-  const uniqueDates = [...new Set(entries.map((e) => e.date))].sort();
-
-  let longestStreak = 0;
-  let currentStreakCount = 1;
-  let tempStreak = 1;
-
-  for (let i = 1; i < uniqueDates.length; i++) {
-    const prevDate = new Date(uniqueDates[i - 1]);
-    const currDate = new Date(uniqueDates[i]);
-    const dayDiff = Math.floor(
-      (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-
-    if (dayDiff === 1) {
-      tempStreak++;
-    } else {
-      longestStreak = Math.max(longestStreak, tempStreak);
-      tempStreak = 1;
-    }
-  }
-
-  longestStreak = Math.max(longestStreak, tempStreak);
-
-  // Calculate current streak (from the most recent date backwards)
-  if (uniqueDates.length > 0) {
-    currentStreakCount = 1;
-    for (let i = uniqueDates.length - 2; i >= 0; i--) {
-      const currDate = new Date(uniqueDates[i + 1]);
-      const prevDate = new Date(uniqueDates[i]);
-      const dayDiff = Math.floor(
-        (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (dayDiff === 1) {
-        currentStreakCount++;
-      } else {
-        break;
-      }
-    }
-  }
-
-  return { longestStreak, currentStreak: currentStreakCount };
 }
 
 export async function clientLoader({ request }: Route.ClientLoaderArgs) {
@@ -157,59 +109,38 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       (entry) => entry.date >= start && entry.date <= end
     );
 
-    const total = entries.reduce((sum, entry) => sum + entry.value, 0);
-    const daysTracked = new Set(entries.map((e) => e.date)).size;
+    // Calculate all stats in a single pass
+    const fromDate = new Date(year, month, 1);
+    const toDate = endOfMonth(fromDate);
 
-    // Calculate daily totals
-    const dailyTotals = entries.reduce((acc, entry) => {
-      acc[entry.date] = (acc[entry.date] || 0) + entry.value;
-      return acc;
-    }, {} as Record<string, number>);
-
-    // Calculate days missed based on whether tracker has a goal
-    let daysMissed: number;
-    if (tracker.goal) {
-      // For trackers with goals: count days where goal wasn't met
-      daysMissed = Object.values(dailyTotals).filter(
-        (dailyTotal) => dailyTotal < tracker.goal!
-      ).length;
-    } else {
-      // For trackers without goals: count days not tracked (excluding future days)
-      daysMissed = Math.max(
-        0,
-        totalDaysInMonth - daysTracked - daysLeftToEndOfMonth
-      );
-    }
-
-    const todayTotal = dailyTotals[formatDateString(new Date())];
-    const isTodayGoalMet = tracker.goal
-      ? todayTotal >= tracker.goal
-      : !!todayTotal;
-    const average = daysPassed ? total / daysPassed : total;
-    const percentageDaysTracked = Math.floor(
-      (daysTracked / (totalDaysInMonth - daysLeftToEndOfMonth)) * 100
-    );
-
-    const bestDay = Object.entries(dailyTotals).reduce(
-      (best, [date, value]) => {
-        if (!best || value > best.value) {
-          return { date, value };
-        }
-        return best;
-      },
-      null as { date: string; value: number } | null
+    const calculatedStats = calculateUnifiedStats(
+      entries,
+      { fromDate, toDate },
+      tracker.goal,
+      {
+        includeTotal: true,
+        includeAverage: true,
+        includeDaysTracked: true,
+        includeDaysMissed: true,
+        includePercentageDaysTracked: true,
+        includeBestDay: true,
+        includeStreaks: true,
+        includeTodayGoalMet: true,
+      }
     );
 
     stats.push({
       tracker,
-      total,
-      daysTracked,
-      daysMissed,
-      percentageDaysTracked,
-      isTodayGoalMet,
+      total: calculatedStats.total ?? 0,
+      daysTracked: calculatedStats.daysTracked ?? 0,
+      daysMissed: calculatedStats.daysMissed ?? 0,
+      percentageDaysTracked: calculatedStats.percentageDaysTracked ?? 0,
+      isTodayGoalMet: calculatedStats.isTodayGoalMet ?? false,
       isCurrentMonth,
-      average,
-      bestDay,
+      average: calculatedStats.average ?? 0,
+      bestDay: calculatedStats.bestDay ?? null,
+      longestStreak: calculatedStats.longestStreak ?? 0,
+      currentStreak: calculatedStats.currentStreak ?? 0,
       entries,
     });
   }
@@ -462,9 +393,6 @@ export default function MonthlyRecap() {
           {monthlyStats.map((stat, index) => {
             const gradientClass =
               GRADIENT_CLASSES[index % GRADIENT_CLASSES.length];
-            const { longestStreak, currentStreak } = calculateStreaks(
-              stat.entries
-            );
             const displayTotal =
               stat.tracker.type === "checkbox"
                 ? stat.daysTracked
@@ -541,14 +469,14 @@ export default function MonthlyRecap() {
                     )}
 
                     <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{longestStreak}</div>
+                      <div className="text-3xl font-bold">{stat.longestStreak}</div>
                       <div className="text-sm opacity-90 mt-1">
                         Longest Streak
                       </div>
                     </div>
 
                     <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{currentStreak}</div>
+                      <div className="text-3xl font-bold">{stat.currentStreak}</div>
                       <div className="text-sm opacity-90 mt-1">
                         Current Streak
                       </div>
