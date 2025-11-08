@@ -31,9 +31,7 @@ export function SyncButton() {
     }
 
     switch (syncState.status) {
-      case "checking":
-      case "uploading":
-      case "downloading":
+      case "syncing":
         return <RefreshCw className="h-4 w-4 animate-spin text-foreground" />;
       case "success":
       case "idle":
@@ -45,7 +43,6 @@ export function SyncButton() {
         }
         return <RefreshCw className="h-4 w-4" />;
       case "error":
-      case "conflict":
         return (
           <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
         );
@@ -60,28 +57,10 @@ export function SyncButton() {
     // Check for revalidating state first
     if (isRevalidating) {
       content = "Refreshing data...";
-    } else if (
-      syncState.status === "checking" ||
-      syncState.status === "uploading" ||
-      syncState.status === "downloading"
-    ) {
-      // Show what triggered the sync
-      if (syncState.triggeredBy === "data-change") {
-        content = "Syncing changes...";
-      } else if (syncState.triggeredBy === "auto") {
-        content = "Auto-syncing...";
-      } else {
-        content = "Syncing...";
-      }
+    } else if (syncState.status === "syncing") {
+      content = "Syncing...";
     } else if (syncState.status === "success") {
-      // Show what triggered the last successful sync
-      if (syncState.triggeredBy === "data-change") {
-        content = "Changes synced";
-      } else if (syncState.triggeredBy === "auto") {
-        content = "Auto-synced";
-      } else {
-        content = "Sync complete";
-      }
+      content = syncState.message || "Synced";
     } else if (syncState.status === "error") {
       content = `Sync failed: ${syncState.lastError || "Unknown error"}`;
     } else {
@@ -120,10 +99,7 @@ export function SyncButton() {
     }
 
     // Don't show click hint when actively syncing or revalidating
-    if (
-      !isRevalidating &&
-      !["checking", "uploading", "downloading"].includes(syncState.status)
-    ) {
+    if (!isRevalidating && syncState.status !== "syncing") {
       content += "\n\nClick to sync now";
     }
 
@@ -136,19 +112,12 @@ export function SyncButton() {
         <Button
           size="icon"
           variant="ghost"
-          onClick={() => handleSync(false, "manual")}
+          onClick={() => handleSync()}
           disabled={
             isRevalidating ||
-            ["uploading", "downloading", "checking"].includes(syncState.status)
+            syncState.status === "syncing"
           }
-          className={cn(
-            "h-8 w-8 transition-all relative",
-            syncState.triggeredBy === "data-change" &&
-              ["uploading", "downloading", "checking"].includes(
-                syncState.status
-              ) &&
-              "animate-pulse ring-2 ring-blue-500/50"
-          )}
+          className="h-8 w-8 transition-all relative"
         >
           {getIcon()}
         </Button>

@@ -20,4 +20,6 @@ export type Tracker = {
   goal?: number;
   parentId?: string;
   isHidden?: boolean;
+  deletedAt?: Date;
+  updatedAt?: Date; // Timestamp for when tracker metadata was last modified
 };

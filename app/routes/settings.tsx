@@ -26,7 +26,7 @@ import {
 } from "~/components/ui/card";
 import { Separator } from "~/components/ui/separator";
 import { exportAllData } from "~/lib/data-operations";
-import { importData, validateExportData } from "~/lib/data-export";
+import { importData, validateExportData } from "~/lib/data";
 import { debouncedDataChange } from "~/lib/data-change-events";
 import { isSyncConfigured } from "~/lib/github-gist-sync";
 import {

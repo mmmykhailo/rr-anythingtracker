@@ -3,7 +3,7 @@ import {
   loadDataFromFile,
   importData,
   validateExportData,
-} from "./data-export";
+} from "./data";
 import { debouncedDataChange } from "./data-change-events";
 
 export interface DataOperationResult {

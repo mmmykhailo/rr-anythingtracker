@@ -1,16 +1,14 @@
-import { describe, test, expect, beforeEach, mock } from "bun:test";
-import { importData, exportData, type ExportData } from "./data-export";
+import { describe, test, expect, beforeEach } from "bun:test";
+import { importData, type ExportData } from ".";
 import {
   clearAllData,
   getDB,
   getLastChangeDate,
-  getAllTrackers,
   getTrackerById,
   setLastChangeDate,
   saveTrackerWithId,
   createEntryWithId,
-} from "./db";
-import { openDB, type IDBPDatabase } from "idb";
+} from "../db";
 
 // Mock IndexedDB for testing
 import "fake-indexeddb/auto";
