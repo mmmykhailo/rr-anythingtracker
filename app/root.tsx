@@ -8,7 +8,6 @@ import {
 } from "react-router";
 import { useEffect } from "react";
 import type { Route } from "./+types/root";
-import { DevUtils } from "~/components/dev-utils";
 import { SyncProvider } from "~/components/SyncProvider";
 import { usePwaInstall } from "~/lib/hooks/usePwaInstall";
 
@@ -55,7 +54,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <div className="root overflow-x-hidden">
             <div className="max-w-md mx-auto px-4 pb-8">{children}</div>
           </div>
-          <DevUtils />
         </SyncProvider>
         <ScrollRestoration />
         <Scripts />
