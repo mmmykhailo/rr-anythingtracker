@@ -622,7 +622,7 @@ export default function MonthlyRecap() {
                     </h3>
 
                     {/* Month indicator */}
-                    <div className={cn("bg-black/30 rounded-lg px-3 py-1 text-sm font-medium shrink-0", themeObject.date)}>
+                    <div className={cn("bg-black/30 rounded-lg px-3 py-1 text-sm font-medium shrink-0", themeObject.card, themeObject.date)}>
                       {MONTH_NAMES[selectedMonth]} {selectedYear}
                     </div>
                   </div>
