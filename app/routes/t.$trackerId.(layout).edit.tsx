@@ -263,7 +263,7 @@ export default function TrackerEditPage() {
                 <SelectGroup>
                   {trackerTypes.map((trackerType) => (
                     <SelectItem key={trackerType} value={trackerType}>
-                      {trackerTypesLabels[trackerType]}
+                      {trackerTypesLabels[trackerType].long}
                     </SelectItem>
                   ))}
                 </SelectGroup>

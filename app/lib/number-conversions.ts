@@ -3,23 +3,29 @@ import type { TrackerType } from "./trackers";
 // Define conversion factors for each tracker type
 // Values are stored as the smallest unit to avoid floating point issues
 export const conversionFactors: Record<TrackerType, number> = {
-  liters: 1000, // Store as milliliters (1L = 1000ml)
-  steps: 1,     // Already in smallest unit
-  checkbox: 1,  // Binary value (0 or 1)
-  none: 1000,   // Store with precision (1.0 = 1000)
+  liters: 1000,     // Store as milliliters (1L = 1000ml)
+  kilometers: 1000, // Store as meters (1km = 1000m)
+  kilograms: 1000,  // Store as grams (1kg = 1000g)
+  steps: 1,         // Already in smallest unit
+  checkbox: 1,      // Binary value (0 or 1)
+  none: 1000,       // Store with precision (1.0 = 1000)
 };
 
 // Define decimal places for display formatting
 export const displayDecimals: Record<TrackerType, number> = {
-  liters: 3,    // Show up to 3 decimal places for liters (e.g., 0.001L)
-  steps: 0,     // No decimals for steps
-  checkbox: 0,  // No decimals for checkbox
-  none: 3,      // Show up to 3 decimal places for generic values
+  liters: 3,     // Show up to 3 decimal places for liters (e.g., 0.001L)
+  kilometers: 3, // Show up to 3 decimal places for kilometers (e.g., 0.001km)
+  kilograms: 3,  // Show up to 3 decimal places for kilograms (e.g., 0.001kg)
+  steps: 0,      // No decimals for steps
+  checkbox: 0,   // No decimals for checkbox
+  none: 3,       // Show up to 3 decimal places for generic values
 };
 
 // Define display units
 export const displayUnits: Record<TrackerType, string> = {
   liters: "L",
+  kilometers: "km",
+  kilograms: "kg",
   steps: "steps",
   checkbox: "",
   none: "",

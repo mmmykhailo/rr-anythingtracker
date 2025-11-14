@@ -1,12 +1,52 @@
-export const trackerTypes = ["liters", "steps", "none", "checkbox"] as const;
+export const trackerTypes = [
+  "liters",
+  "steps",
+  "kilometers",
+  "kilograms",
+  "none",
+  "checkbox",
+] as const;
 
 export type TrackerType = (typeof trackerTypes)[number];
 
-export const trackerTypesLabels: Record<TrackerType, string> = {
-  none: "None",
-  checkbox: "Checkbox",
-  liters: "Liters",
-  steps: "Steps",
+export const trackerTypesLabels: Record<
+  TrackerType,
+  {
+    shortest: string;
+    short: string;
+    long: string;
+  }
+> = {
+  none: {
+    shortest: "",
+    short: "None",
+    long: "None",
+  },
+  checkbox: {
+    shortest: "",
+    short: "Checkbox",
+    long: "Checkbox",
+  },
+  liters: {
+    shortest: "L",
+    short: "liters",
+    long: "Liters (L)",
+  },
+  steps: {
+    shortest: "steps",
+    short: "steps",
+    long: "Steps",
+  },
+  kilometers: {
+    shortest: "km",
+    short: "km",
+    long: "Kilometers (km)",
+  },
+  kilograms: {
+    shortest: "kg",
+    short: "kg",
+    long: "Kilograms (kg)",
+  },
 };
 
 export type Tracker = {

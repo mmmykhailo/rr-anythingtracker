@@ -224,7 +224,7 @@ export default function NewTrackerPage() {
                 <SelectGroup>
                   {trackerTypes.map((trackerType) => (
                     <SelectItem key={trackerType} value={trackerType}>
-                      {trackerTypesLabels[trackerType]}
+                      {trackerTypesLabels[trackerType].long}
                     </SelectItem>
                   ))}
                 </SelectGroup>

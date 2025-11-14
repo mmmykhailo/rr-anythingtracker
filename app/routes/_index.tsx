@@ -21,6 +21,7 @@ import { isOnboardingCompleted } from "~/lib/github-gist-sync";
 import { getShowHiddenTrackers } from "~/lib/user-settings";
 import clsx from "clsx";
 import type { Tracker } from "~/lib/trackers";
+import { trackerTypesLabels } from "~/lib/trackers";
 import { InstallPwaPrompt } from "~/components/InstallPwaPrompt";
 import {
   Empty,
@@ -349,7 +350,7 @@ export default function Home() {
                           {tracker.type !== "checkbox" &&
                             tracker.type !== "none" && (
                               <span className="text-xs opacity-60">
-                                {tracker.type}
+                                {trackerTypesLabels[tracker.type].short}
                               </span>
                             )}
                           <Link
