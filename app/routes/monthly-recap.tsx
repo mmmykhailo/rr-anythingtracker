@@ -6,7 +6,7 @@ import { getAllTrackers, getEntryHistory } from "~/lib/db";
 import type { Tracker } from "~/lib/trackers";
 import { formatStoredValue } from "~/lib/number-conversions";
 import { getShowHiddenTrackers } from "~/lib/user-settings";
-import { calculateUnifiedStats } from "~/lib/stats";
+import { calculateStats } from "~/lib/stats";
 import { Button } from "~/components/ui/button";
 import {
   Select,
@@ -108,7 +108,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     const fromDate = new Date(year, month, 1);
     const toDate = endOfMonth(fromDate);
 
-    const calculatedStats = calculateUnifiedStats(
+    const calculatedStats = calculateStats(
       allEntries,
       { fromDate, toDate },
       tracker.goal,
@@ -120,7 +120,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
         includePercentageDaysTracked: true,
         includeBestDay: true,
         includeStreaks: true,
-        includeTodayGoalMet: true,
+        includeGoalMetToday: true,
       }
     );
 
@@ -135,7 +135,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       daysTracked: calculatedStats.daysTracked ?? 0,
       daysMissed: calculatedStats.daysMissed ?? 0,
       percentageDaysTracked: calculatedStats.percentageDaysTracked ?? 0,
-      isTodayGoalMet: calculatedStats.isTodayGoalMet ?? false,
+      isTodayGoalMet: calculatedStats.isGoalMetToday ?? false,
       isCurrentMonth,
       average: calculatedStats.average ?? 0,
       bestDay: calculatedStats.bestDay ?? null,
@@ -469,14 +469,18 @@ export default function MonthlyRecap() {
                     )}
 
                     <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{stat.longestStreak}</div>
+                      <div className="text-3xl font-bold">
+                        {stat.longestStreak}
+                      </div>
                       <div className="text-sm opacity-90 mt-1">
                         Longest Streak
                       </div>
                     </div>
 
                     <div className="bg-black/20 rounded-xl p-4">
-                      <div className="text-3xl font-bold">{stat.currentStreak}</div>
+                      <div className="text-3xl font-bold">
+                        {stat.currentStreak}
+                      </div>
                       <div className="text-sm opacity-90 mt-1">
                         Current Streak
                       </div>

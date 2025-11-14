@@ -6,7 +6,7 @@ export type { StatsPeriod as StatsPeriodOption, Stats } from "./types";
 export { calculateDateFromPeriod, getSelectedPeriod } from "./date-range";
 
 // Stats calculations
-export { calculateStats as calculateUnifiedStats } from "./calculations";
+export { calculateStats } from "./calculations";
 export type {
   StatsConfig as UnifiedStatsConfig,
   StatsResult as UnifiedStatsResult,

@@ -396,8 +396,8 @@ describe("Stats Calculations", () => {
         }
       );
 
-      expect(result.longestGoalStreak).toBe(2); // Days 1-2 or 4-5
-      expect(result.currentGoalStreak).toBe(2); // Days 4-5
+      expect(result.goalLongestStreak).toBe(2); // Days 1-2 or 4-5
+      expect(result.goalCurrent).toBe(2); // Days 4-5
     });
 
     test("counts missed goal days correctly", () => {
@@ -417,11 +417,11 @@ describe("Stats Calculations", () => {
         100,
         {
           includeDaysTracked: true, // Required to set firstTrackedIndex
-          includeMissedGoalDays: true,
+          includeGoalMissedDays: true,
         }
       );
 
-      expect(result.missedGoalDays).toBe(2); // Days 2 and 4
+      expect(result.goalMissedDays).toBe(2); // Days 2 and 4
     });
 
     test("calculates consistency score correctly", () => {
@@ -441,12 +441,12 @@ describe("Stats Calculations", () => {
         100,
         {
           includeDaysTracked: true, // Required to set firstTrackedIndex
-          includeConsistencyScore: true,
+          includeGoalConsistencyScore: true,
         }
       );
 
       // 3 out of 4 days met goal = 75%
-      expect(result.consistencyScore).toBe(75);
+      expect(result.goalConsistencyScore).toBe(75);
     });
 
     test("goal stats only count from first tracked entry", () => {
@@ -464,14 +464,14 @@ describe("Stats Calculations", () => {
         100,
         {
           includeDaysTracked: true, // Required to set firstTrackedIndex
-          includeMissedGoalDays: true,
-          includeConsistencyScore: true,
+          includeGoalMissedDays: true,
+          includeGoalConsistencyScore: true,
         }
       );
 
       // Only days 3-4 should count (2 days total)
-      expect(result.missedGoalDays).toBe(1); // Day 3 missed
-      expect(result.consistencyScore).toBe(50); // 1 of 2 days = 50%
+      expect(result.goalMissedDays).toBe(1); // Day 3 missed
+      expect(result.goalConsistencyScore).toBe(50); // 1 of 2 days = 50%
     });
 
     test("handles days missed correctly for tracker without goal", () => {
@@ -509,11 +509,11 @@ describe("Stats Calculations", () => {
           toDate: today, // Current period
         },
         100,
-        { includeMissedGoalDays: true }
+        { includeGoalMissedDays: true }
       );
 
       // Today shouldn't be counted as missed
-      expect(result.missedGoalDays).toBe(0);
+      expect(result.goalMissedDays).toBe(0);
     });
 
     test("resets goal streak when goal not met", () => {
@@ -537,8 +537,8 @@ describe("Stats Calculations", () => {
         }
       );
 
-      expect(result.currentGoalStreak).toBe(1); // Only day 4
-      expect(result.longestGoalStreak).toBe(2); // Days 1-2
+      expect(result.goalCurrent).toBe(1); // Only day 4
+      expect(result.goalLongestStreak).toBe(2); // Days 1-2
     });
   });
 
@@ -553,10 +553,10 @@ describe("Stats Calculations", () => {
           toDate: today,
         },
         100,
-        { includeTodayGoalMet: true }
+        { includeGoalMetToday: true }
       );
 
-      expect(result.isTodayGoalMet).toBe(true);
+      expect(result.isGoalMetToday).toBe(true);
     });
 
     test("checks if today's goal is not met", () => {
@@ -569,10 +569,10 @@ describe("Stats Calculations", () => {
           toDate: today,
         },
         100,
-        { includeTodayGoalMet: true }
+        { includeGoalMetToday: true }
       );
 
-      expect(result.isTodayGoalMet).toBe(false);
+      expect(result.isGoalMetToday).toBe(false);
     });
 
     test("aggregates multiple entries for today's goal", () => {
@@ -589,10 +589,10 @@ describe("Stats Calculations", () => {
           toDate: today,
         },
         100,
-        { includeTodayGoalMet: true }
+        { includeGoalMetToday: true }
       );
 
-      expect(result.isTodayGoalMet).toBe(true); // Total 100 meets goal
+      expect(result.isGoalMetToday).toBe(true); // Total 100 meets goal
     });
 
     test("works without goal (checks if any entry exists)", () => {
@@ -605,10 +605,10 @@ describe("Stats Calculations", () => {
           toDate: today,
         },
         undefined,
-        { includeTodayGoalMet: true }
+        { includeGoalMetToday: true }
       );
 
-      expect(result.isTodayGoalMet).toBe(true);
+      expect(result.isGoalMetToday).toBe(true);
     });
   });
 
@@ -629,8 +629,8 @@ describe("Stats Calculations", () => {
         {
           includeAverage: true,
           includeDaysTracked: true, // Required to set firstTrackedIndex
-          includeMissedGoalDays: true,
-          includeConsistencyScore: true,
+          includeGoalMissedDays: true,
+          includeGoalConsistencyScore: true,
         }
       );
 
@@ -638,7 +638,7 @@ describe("Stats Calculations", () => {
       expect(result.average).toBe(50); // 100 / 2
 
       // Goal stats shouldn't count future days
-      expect(result.missedGoalDays).toBe(1); // Only today is missed
+      expect(result.goalMissedDays).toBe(1); // Only today is missed
     });
 
     test("handles single-day range", () => {
@@ -777,9 +777,9 @@ describe("Stats Calculations", () => {
         includeBestDay: true,
         includeStreaks: true,
         includeGoalStreaks: true,
-        includeMissedGoalDays: true,
-        includeConsistencyScore: true,
-        includeTodayGoalMet: false,
+        includeGoalMissedDays: true,
+        includeGoalConsistencyScore: true,
+        includeGoalMetToday: false,
       };
 
       const result = calculateStats(
@@ -803,10 +803,10 @@ describe("Stats Calculations", () => {
       });
       expect(result.longestStreak).toBe(5);
       expect(result.currentStreak).toBe(0); // Streak broken (no entry today)
-      expect(result.longestGoalStreak).toBe(2); // Days 1-2 or 4-5
-      expect(result.currentGoalStreak).toBe(2); // Days 4-5
-      expect(result.missedGoalDays).toBe(1); // Day 3
-      expect(result.consistencyScore).toBe(80); // 4 of 5 days met goal
+      expect(result.goalLongestStreak).toBe(2); // Days 1-2 or 4-5
+      expect(result.goalCurrent).toBe(2); // Days 4-5
+      expect(result.goalMissedDays).toBe(1); // Day 3
+      expect(result.goalConsistencyScore).toBe(80); // 4 of 5 days met goal
     });
 
     test("handles sparse entries with gaps", () => {

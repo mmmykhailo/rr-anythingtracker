@@ -17,11 +17,11 @@ export interface StatsConfig {
 
   // Goal-specific stats
   includeGoalStreaks?: boolean;
-  includeConsistencyScore?: boolean;
-  includeMissedGoalDays?: boolean;
+  includeGoalConsistencyScore?: boolean;
+  includeGoalMissedDays?: boolean;
 
   // Today stats
-  includeTodayGoalMet?: boolean;
+  includeGoalMetToday?: boolean;
 }
 
 export interface StatsResult {
@@ -40,13 +40,13 @@ export interface StatsResult {
   currentStreak?: number;
 
   // Goal-specific stats
-  currentGoalStreak?: number;
-  longestGoalStreak?: number;
-  missedGoalDays?: number;
-  consistencyScore?: number;
+  goalCurrent?: number;
+  goalLongestStreak?: number;
+  goalMissedDays?: number;
+  goalConsistencyScore?: number;
 
   // Today stats
-  isTodayGoalMet?: boolean;
+  isGoalMetToday?: boolean;
 }
 
 /**
@@ -172,11 +172,14 @@ export function calculateStats(
   let goalMetDays = 0;
   let firstTrackedIndex = -1;
 
+  console.log({ rangeDailyTotals });
   // Process each day in the selected range
   for (let i = 0; i < dateRange.length; i++) {
     const dateStr = dateRange[i];
     const dailyValue = rangeDailyTotals.get(dateStr) || 0;
     const hasEntry = rangeDailyTotals.has(dateStr);
+
+    console.log({ dateStr, dailyValue, hasEntry });
 
     // Basic stats calculations
     if (config.includeTotal || config.includeAverage) {
@@ -186,7 +189,11 @@ export function calculateStats(
     if (
       config.includeDaysTracked ||
       config.includePercentageDaysTracked ||
-      config.includeDaysMissed
+      config.includeDaysMissed ||
+      config.includeGoalConsistencyScore ||
+      config.includeGoalMissedDays ||
+      config.includeGoalMetToday ||
+      config.includeGoalStreaks
     ) {
       if (hasEntry) {
         daysTracked++;
@@ -207,9 +214,10 @@ export function calculateStats(
       goalValue &&
       goalValue > 0 &&
       (config.includeGoalStreaks ||
-        config.includeConsistencyScore ||
-        config.includeMissedGoalDays)
+        config.includeGoalConsistencyScore ||
+        config.includeGoalMissedDays)
     ) {
+      console.log({ firstTrackedIndex });
       // Only count days from first tracked entry onwards
       if (firstTrackedIndex !== -1 && i >= firstTrackedIndex) {
         const isLastDay = i === dateRange.length - 1;
@@ -223,6 +231,7 @@ export function calculateStats(
             goalMetDays++;
             currentGoalStreak = tempGoalStreak;
           } else {
+            console.log("Goal not met on", dateStr);
             tempGoalStreak = 0;
             currentGoalStreak = 0;
             // Don't count today if goal not met and it's the last day
@@ -275,28 +284,29 @@ export function calculateStats(
   }
 
   if (config.includeGoalStreaks && goalValue && goalValue > 0) {
-    result.currentGoalStreak = currentGoalStreak;
-    result.longestGoalStreak = longestGoalStreak;
+    console.log({ currentGoalStreak });
+    result.goalCurrent = currentGoalStreak;
+    result.goalLongestStreak = longestGoalStreak;
   }
 
-  if (config.includeMissedGoalDays && goalValue && goalValue > 0) {
-    result.missedGoalDays = missedGoalDays;
+  if (config.includeGoalMissedDays && goalValue && goalValue > 0) {
+    result.goalMissedDays = missedGoalDays;
   }
 
-  if (config.includeConsistencyScore && goalValue && goalValue > 0) {
+  if (config.includeGoalConsistencyScore && goalValue && goalValue > 0) {
     const totalDaysWithGoal =
       firstTrackedIndex !== -1
         ? Math.max(0, daysPassed - firstTrackedIndex)
         : 0;
-    result.consistencyScore =
+    result.goalConsistencyScore =
       totalDaysWithGoal > 0
         ? Math.round((goalMetDays / totalDaysWithGoal) * 100)
         : 0;
   }
 
-  if (config.includeTodayGoalMet) {
+  if (config.includeGoalMetToday) {
     const todayTotal = rangeDailyTotals.get(today) || 0;
-    result.isTodayGoalMet = goalValue
+    result.isGoalMetToday = goalValue
       ? todayTotal >= goalValue
       : todayTotal > 0;
   }
