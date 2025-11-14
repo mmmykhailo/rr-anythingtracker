@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.10] - 2025-11-14
+
+### Changes
+
+- add kilometer and kilogram trackers (a4e6b07)
+- improve stats calculations (55e3e24, 77739f3)
+- remove unneeded padding on recap page (e9ea3fc)
+- add tracker name wrapping in recap (5b9c668)
+- improve sync system (d85ddfd)
+
+
 ## [1.0.9] - 2025-11-06
 
 ### Changes
