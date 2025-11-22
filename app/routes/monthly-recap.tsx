@@ -267,7 +267,7 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
     name: "Gray",
     background: "bg-gradient-to-br from-black to-white",
     title: "text-white",
-    date: "text-white",
+    date: "text-black",
     values: "text-black",
     description: "text-black",
     card: "bg-white/80",
