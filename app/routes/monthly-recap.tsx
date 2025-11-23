@@ -77,7 +77,6 @@ type RecapThemeName =
   | "green-emerald"
   | "orange-red"
   | "indigo-purple"
-  | "black-white"
   | "olive-green";
 
 function getMonthDateRange(year: number, month: number) {
@@ -259,16 +258,6 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
     values: "text-white",
     description: "text-white",
     card: "bg-black/20",
-    watermark: "text-white/50"
-  },
-  "black-white": {
-    name: "Gray",
-    background: "bg-gradient-to-br from-black to-neutral-200",
-    title: "text-white",
-    date: "text-black",
-    values: "text-black",
-    description: "text-black",
-    card: "bg-white/80",
     watermark: "text-white/50"
   },
   "olive-green": {
@@ -677,7 +666,7 @@ export default function MonthlyRecap() {
             {Object.entries(THEMES).map(([key, theme]) => (
               <div
                 key={key}
-                className={cn("w-6 h-6 rounded-full cursor-pointer flex items-center justify-center text-sm font-semibold select-none",
+                className={cn("w-7 h-7 rounded-full cursor-pointer flex items-center justify-center text-sm font-semibold select-none",
                   theme.background,
                   theme.title,
                   selectedTheme === key ? "border-2 border-white" : "")}
