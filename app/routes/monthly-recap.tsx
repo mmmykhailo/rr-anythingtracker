@@ -467,7 +467,7 @@ export default function MonthlyRecap() {
     <div className="min-h-screen bg-zinc-950 text-white py-4 pb-8">
       {/* Header */}
       <div className="max-w-2xl mx-auto mb-4">
-        <div className="flex items-center justify-between mb-4 gap-2">
+        <div className="flex items-center justify-between mb-2 gap-2">
           <Link
             to="/"
             className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
