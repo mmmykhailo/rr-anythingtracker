@@ -22,8 +22,7 @@ import {
   Share2,
   CalendarX,
   CopyIcon,
-  Palette,
-  List,
+  ChartNoAxesColumn,
 } from "lucide-react";
 import clsx from "clsx";
 import {
@@ -102,8 +101,8 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
   const month = parseInt(
     url.searchParams.get("month") ?? String(now.getMonth())
   );
-  const theme = url.searchParams.get("theme") ?? "default";
-  const tracker = url.searchParams.get("tracker") ?? "";
+  const theme = url.searchParams.get("theme") ?? Object.keys(THEMES)[0];
+  const trackerId = url.searchParams.get("trackerId") ?? "";
 
   const allTrackers = await getAllTrackers();
   const showHiddenTrackers = getShowHiddenTrackers();
@@ -111,8 +110,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     ? allTrackers
     : allTrackers.filter((t) => !t.isHidden);
 
-  const selectedTrackers =
-    tracker === "all" ? trackers : trackers.filter((t) => t.id === tracker);
+  const selectedTrackers = trackers.filter((t) => t.id === trackerId);
 
   const { start, end } = getMonthDateRange(year, month);
 
@@ -180,7 +178,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
     selectedYear: year,
     selectedMonth: month,
     selectedTheme: theme as RecapThemeName & "default",
-    selectedTracker: tracker,
+    selectedTrackerId: trackerId,
     hasGenerated: true,
   };
 }
@@ -265,7 +263,7 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
   },
   "black-white": {
     name: "Gray",
-    background: "bg-gradient-to-br from-black to-white",
+    background: "bg-gradient-to-br from-black to-neutral-200",
     title: "text-white",
     date: "text-black",
     values: "text-black",
@@ -292,13 +290,14 @@ export default function MonthlyRecap() {
     selectedYear,
     selectedMonth,
     selectedTheme,
-    selectedTracker,
+    selectedTrackerId,
     hasGenerated,
   } = useLoaderData<typeof clientLoader>();
   const navigate = useNavigate();
 
+  const currentTracker = allTrackers.find((t) => t.id === selectedTrackerId);
+
   const now = new Date();
-  const [generatingCardId, setGeneratingCardId] = useState<string | null>(null);
   const [canShare, setCanShare] = useState(false);
 
   useEffect(() => {
@@ -308,7 +307,7 @@ export default function MonthlyRecap() {
 
   const handleMonthChange = (month: string) => {
     navigate(
-      `/monthly-recap?year=${selectedYear}&month=${month}&theme=${selectedTheme}&tracker=${selectedTracker}`,
+      `/monthly-recap?year=${selectedYear}&month=${month}&theme=${selectedTheme}&trackerId=${selectedTrackerId}`,
       {
         replace: true,
         preventScrollReset: true,
@@ -318,7 +317,7 @@ export default function MonthlyRecap() {
 
   const handleYearChange = (year: string) => {
     navigate(
-      `/monthly-recap?year=${year}&month=${selectedMonth}&theme=${selectedTheme}&tracker=${selectedTracker}`,
+      `/monthly-recap?year=${year}&month=${selectedMonth}&theme=${selectedTheme}&trackerId=${selectedTrackerId}`,
       {
         replace: true,
         preventScrollReset: true,
@@ -328,7 +327,7 @@ export default function MonthlyRecap() {
 
   const handleThemeChange = (theme: RecapThemeName) => {
     navigate(
-      `/monthly-recap?year=${selectedYear}&month=${selectedMonth}&theme=${theme}&tracker=${selectedTracker}`,
+      `/monthly-recap?year=${selectedYear}&month=${selectedMonth}&theme=${theme}&trackerId=${selectedTrackerId}`,
       {
         replace: true,
         preventScrollReset: true,
@@ -338,7 +337,7 @@ export default function MonthlyRecap() {
 
   const handleTrackerChange = (tracker: string) => {
     navigate(
-      `/monthly-recap?year=${selectedYear}&month=${selectedMonth}&theme=${selectedTheme}&tracker=${tracker}`,
+      `/monthly-recap?year=${selectedYear}&month=${selectedMonth}&theme=${selectedTheme}&trackerId=${tracker}`,
       {
         replace: true,
         preventScrollReset: true,
@@ -374,34 +373,32 @@ export default function MonthlyRecap() {
     ].toLowerCase()}-${selectedYear}.png`;
   };
 
-  const handleDownloadCard = async (cardId: string, trackerTitle: string) => {
-    setGeneratingCardId(cardId);
+  const handleDownloadCard = async () => {
+    if (!currentTracker) return;
 
     try {
-      const blob = await generateCardImage(cardId);
+      const blob = await generateCardImage(currentTracker.id);
       if (!blob) return;
 
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = getFileName(trackerTitle);
+      a.download = getFileName(currentTracker.title);
       a.click();
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Failed to generate image:", error);
-    } finally {
-      setGeneratingCardId(null);
     }
   };
 
-  const handleShareCard = async (cardId: string, trackerTitle: string) => {
-    setGeneratingCardId(cardId);
+  const handleShareCard = async () => {
+    if (!currentTracker) return;
 
     try {
-      const blob = await generateCardImage(cardId);
+      const blob = await generateCardImage(currentTracker.id);
       if (!blob) return;
 
-      const fileName = getFileName(trackerTitle);
+      const fileName = getFileName(currentTracker.title);
       const file = new File([blob], fileName, { type: "image/png" });
 
       // Check if Web Share API is available
@@ -409,8 +406,8 @@ export default function MonthlyRecap() {
         try {
           await navigator.share({
             files: [file],
-            title: `${trackerTitle} - ${MONTH_NAMES[selectedMonth]} ${selectedYear}`,
-            text: `Check out my ${trackerTitle} progress for ${MONTH_NAMES[selectedMonth]}!`,
+            title: `${currentTracker.title} - ${MONTH_NAMES[selectedMonth]} ${selectedYear}`,
+            text: `Check out my ${currentTracker.title} progress for ${MONTH_NAMES[selectedMonth]}!`,
           });
         } catch (error) {
           // User cancelled or share failed
@@ -427,16 +424,14 @@ export default function MonthlyRecap() {
       }
     } catch (error) {
       console.error("Failed to share image:", error);
-    } finally {
-      setGeneratingCardId(null);
     }
   };
 
-  const handleCopyCard = async (cardId: string, trackerTitle: string) => {
-    setGeneratingCardId(cardId);
+  const handleCopyCard = async () => {
+    if (!currentTracker) return;
 
     try {
-      const blob = await generateCardImage(cardId);
+      const blob = await generateCardImage(currentTracker.id);
       if (!blob) return;
 
       try {
@@ -452,14 +447,12 @@ export default function MonthlyRecap() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = getFileName(trackerTitle);
+        a.download = getFileName(currentTracker.title);
         a.click();
         URL.revokeObjectURL(url);
       }
     } catch (error) {
       console.error("Failed to generate image:", error);
-    } finally {
-      setGeneratingCardId(null);
     }
   };
 
@@ -473,121 +466,72 @@ export default function MonthlyRecap() {
   return (
     <div className="min-h-screen bg-zinc-950 text-white py-4 pb-8">
       {/* Header */}
-      <div className="max-w-2xl mx-auto mb-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-2xl mx-auto mb-4">
+        <div className="flex items-center justify-between mb-4 gap-2">
           <Link
             to="/"
             className="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
           >
             <ChevronLeft className="w-6 h-6" />
           </Link>
-          <h1 className="text-2xl font-bold">Monthly Recap</h1>
-          <div className="w-10" /> {/* Spacer */}
+          <Select
+            value={selectedMonth.toString()}
+            onValueChange={handleMonthChange}
+          >
+            <SelectTrigger className="flex-1">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {MONTH_NAMES.map((month, index) => (
+                <SelectItem key={index} value={index.toString()}>
+                  {month}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={selectedYear.toString()}
+            onValueChange={handleYearChange}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from(
+                { length: 5 },
+                (_, i) => now.getFullYear() - i
+              ).map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-
-        <div className="flex flex-col gap-1 mb-8">
-          {/* Month/Year Selector */}
-          <div className="bg-zinc-900 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-4">
-              <Calendar className="w-5 h-5 text-zinc-400" />
-              <div className="flex-1 flex gap-2">
-                <Select
-                  value={selectedMonth.toString()}
-                  onValueChange={handleMonthChange}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MONTH_NAMES.map((month, index) => (
-                      <SelectItem key={index} value={index.toString()}>
-                        {month}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select
-                  value={selectedYear.toString()}
-                  onValueChange={handleYearChange}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from(
-                      { length: 5 },
-                      (_, i) => now.getFullYear() - i
-                    ).map((year) => (
-                      <SelectItem key={year} value={year.toString()}>
-                        {year}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex gap-1">
-            {/* Tracker/Theme Selector */}
-            <div className="bg-zinc-900 rounded-xl px-4 py-3 grow">
-              <div className="flex items-center gap-4">
-                <List className="w-5 h-5 text-zinc-400" />
-                <div className="flex-1 flex">
-                  <Select
-                    value={selectedTracker}
-                    onValueChange={handleTrackerChange}
-                  >
-                    <SelectTrigger className="flex-1 max-w-[168px] truncate span>truncate">
-                      {/* trim long titles with ellipsis */}
-                      {/* <SelectValue placeholder="Select Tracker" className="" /> */}
-                      <span className="block truncate">
-                        <SelectValue placeholder="Select Tracker" />
-                      </span>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {allTrackers.map((tracker) => (
-                        <SelectItem key={tracker.id} value={tracker.id}>
-                          {tracker.title}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Tracker/Theme Selector */}
-            <div className="bg-zinc-900 rounded-xl px-4 py-3 min-w-44">
-              <div className="flex items-center gap-4">
-                <Palette className="w-5 h-5 text-zinc-400" />
-                <div className="flex-1 flex gap-2">
-                  <Select
-                    value={selectedTheme}
-                    onValueChange={handleThemeChange}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="default">Default</SelectItem>
-                      {Object.entries(THEMES).map(([key, theme]) => (
-                        <SelectItem key={key} value={key}>
-                          {theme.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="flex-1 flex mb-4">
+          <Select
+            value={selectedTrackerId}
+            onValueChange={handleTrackerChange}
+          >
+            <SelectTrigger className="flex-1 truncate span>truncate">
+              <span className="block truncate">
+                <SelectValue placeholder="Select Tracker" />
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              {allTrackers.map((tracker) => (
+                <SelectItem key={tracker.id} value={tracker.id}>
+                  {tracker.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       {/* Recap Content */}
       {monthlyStats.length > 0 && (
-        <div className="max-w-2xl mx-auto space-y-6">
+        <div className="max-w-2xl mx-auto space-y-6 select-none">
           {monthlyStats.map((stat, index) => {
             const displayTotal =
               stat.tracker.type === "checkbox"
@@ -597,14 +541,13 @@ export default function MonthlyRecap() {
               stat.tracker.type === "checkbox"
                 ? "-"
                 : formatStoredValue(
-                    Math.round(stat.average),
-                    stat.tracker.type
-                  );
+                  Math.round(stat.average),
+                  stat.tracker.type
+                );
             const displayBest =
               stat.bestDay && stat.tracker.type !== "checkbox"
                 ? formatStoredValue(stat.bestDay.value, stat.tracker.type)
                 : "-";
-            const isGenerating = generatingCardId === stat.tracker.id;
 
             return (
               <div className="rounded-2xl overflow-hidden" key={index}>
@@ -612,7 +555,7 @@ export default function MonthlyRecap() {
                   key={stat.tracker.id}
                   id={`card-${stat.tracker.id}`}
                   className={clsx(
-                    "bg-gradient-to-br p-6 relative",
+                    "bg-gradient-to-br p-6 pb-4 relative",
                     themeObject.background
                   )}
                 >
@@ -716,50 +659,11 @@ export default function MonthlyRecap() {
                     )}
                   </div>
 
-                  {/* Action buttons - hidden during image generation */}
-                  {!isGenerating && (
-                    <div className="flex gap-2 mt-4">
-                      <Button
-                        onClick={() =>
-                          handleDownloadCard(
-                            stat.tracker.id,
-                            stat.tracker.title
-                          )
-                        }
-                        className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download
-                      </Button>
-                      {canShare ? (
-                        <Button
-                          onClick={() =>
-                            handleShareCard(stat.tracker.id, stat.tracker.title)
-                          }
-                          className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
-                        >
-                          <Share2 className="w-4 h-4 mr-2" />
-                          Share
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() =>
-                            handleCopyCard(stat.tracker.id, stat.tracker.title)
-                          }
-                          className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
-                        >
-                          <CopyIcon className="w-4 h-4 mr-2" />
-                          Copy
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                  <div className="text-center mt-4 text-white/50 text-xs flex gap-1">
 
-                  {isGenerating && (
-                    <div className="text-center mt-4 text-white/50 text-xs min-h-9 grid place-items-center">
-                      Generated with tracker.mykhailo.net
-                    </div>
-                  )}
+                    <ChartNoAxesColumn className="w-4 h-4 inline mr-1 mb-0.5" />
+                    Generated with tracker.mykhailo.net
+                  </div>
                 </div>
               </div>
             );
@@ -767,8 +671,53 @@ export default function MonthlyRecap() {
         </div>
       )}
 
+      {selectedTrackerId && (
+        <>
+          <div className="flex w-full items-center justify-evenly my-6">
+            {Object.entries(THEMES).map(([key, theme]) => (
+              <div
+                key={key}
+                className={cn("w-6 h-6 rounded-full cursor-pointer flex items-center justify-center text-sm font-semibold select-none",
+                  theme.background,
+                  theme.title,
+                  selectedTheme === key ? "border-2 border-white" : "")}
+                onClick={() => handleThemeChange(key as RecapThemeName)}>
+                {currentTracker?.title[0].toUpperCase() || "A"}
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-2 mt-4">
+            <Button
+              onClick={handleDownloadCard}
+              className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download
+            </Button>
+            {canShare ? (
+              <Button
+                onClick={handleShareCard}
+                className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
+              >
+                <Share2 className="w-4 h-4 mr-2" />
+                Share
+              </Button>
+            ) : (
+              <Button
+                onClick={handleCopyCard}
+                className="flex-1 bg-black/30 hover:bg-black/40 text-white border-0"
+              >
+                <CopyIcon className="w-4 h-4 mr-2" />
+                Copy
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+
       {/* Empty State - No data for selected month */}
-      {!selectedTracker && hasGenerated && (
+      {!selectedTrackerId && hasGenerated && (
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
@@ -786,7 +735,7 @@ export default function MonthlyRecap() {
       )}
 
       {/* Empty State - No data for selected month */}
-      {selectedTracker &&
+      {selectedTrackerId &&
         monthlyStats.length === 0 &&
         allTrackers.length > 0 &&
         hasGenerated && (
