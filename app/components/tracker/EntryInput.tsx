@@ -70,6 +70,12 @@ export function EntryInput({
     });
   };
 
+  const handleQuickAddClick = (value: number) => {
+    setDisplayValue((oldValue) => {
+      return parseFloat(((oldValue || 0) + value).toPrecision(2));
+    });
+  };
+
   const quickAddValues = quickAddValuesMap[tracker.type];
   const isToday = selectedDate === formatDateString(new Date());
 
@@ -179,9 +185,7 @@ export function EntryInput({
                     className="grow"
                     variant="outline"
                     key={value}
-                    onClick={async () => {
-                      setDisplayValue((oldValue) => (oldValue || 0) + displayQuickAddValue);
-                    }}
+                    onClick={() => handleQuickAddClick(displayQuickAddValue)}
                     disabled={entryLoading}
                   >
                     +{label}
