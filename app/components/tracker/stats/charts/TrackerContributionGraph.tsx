@@ -147,8 +147,16 @@ export function TrackerContributionGraph({
 
     const allDays = eachDayOfInterval(yearStart, yearEnd);
 
-    const weeks: Date[][] = [];
-    let currentWeek: Date[] = [];
+    const weeks: (Date | null)[][] = [];
+    let currentWeek: (Date | null)[] = [];
+
+    // Pad the first week with nulls to align to calendar week (Monday = 0)
+    // getDay() returns 0 for Sunday, 1 for Monday, etc.
+    // Convert to Monday-first: Monday=0, Tuesday=1, ..., Sunday=6
+    const firstDayOfWeek = (allDays[0].getDay() + 6) % 7;
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      currentWeek.push(null);
+    }
 
     for (const day of allDays) {
       currentWeek.push(day);
@@ -172,7 +180,9 @@ export function TrackerContributionGraph({
     let max = 0;
 
     entries.forEach((entry) => {
-      const dateKey = formatDate(new Date(entry.date), "yyyyMMdd");
+      // Use entry.date directly since it's already in "yyyy-MM-dd" format
+      // Convert to yyyyMMdd without timezone issues
+      const dateKey = entry.date.replace(/-/g, "");
       const currentValue = values.get(dateKey) || 0;
       const newValue = currentValue + entry.value;
       values.set(dateKey, newValue);
@@ -232,9 +242,9 @@ export function TrackerContributionGraph({
 
         // Show tooltip for current position
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        const dayButton = element?.closest('[data-date]') as HTMLElement;
+        const dayButton = element?.closest("[data-date]") as HTMLElement;
         if (dayButton) {
-          const dateKey = dayButton.getAttribute('data-date');
+          const dateKey = dayButton.getAttribute("data-date");
           if (dateKey) {
             setHoveredDayKey(dateKey);
           }
@@ -249,10 +259,10 @@ export function TrackerContributionGraph({
 
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        const dayButton = element?.closest('[data-date]') as HTMLElement;
+        const dayButton = element?.closest("[data-date]") as HTMLElement;
 
         if (dayButton) {
-          const dateKey = dayButton.getAttribute('data-date');
+          const dateKey = dayButton.getAttribute("data-date");
           if (dateKey && dateKey !== hoveredDayKey) {
             setHoveredDayKey(dateKey);
           }
@@ -278,19 +288,23 @@ export function TrackerContributionGraph({
       setHoveredDayKey(null);
     };
 
-    scrollArea.addEventListener('touchstart', handleTouchStart, { passive: true });
-    scrollArea.addEventListener('touchmove', handleTouchMove, { passive: false });
-    scrollArea.addEventListener('touchend', handleTouchEnd);
-    scrollArea.addEventListener('touchcancel', handleTouchEnd);
+    scrollArea.addEventListener("touchstart", handleTouchStart, {
+      passive: true,
+    });
+    scrollArea.addEventListener("touchmove", handleTouchMove, {
+      passive: false,
+    });
+    scrollArea.addEventListener("touchend", handleTouchEnd);
+    scrollArea.addEventListener("touchcancel", handleTouchEnd);
 
     return () => {
       if (touchTimerRef.current) {
         clearTimeout(touchTimerRef.current);
       }
-      scrollArea.removeEventListener('touchstart', handleTouchStart);
-      scrollArea.removeEventListener('touchmove', handleTouchMove);
-      scrollArea.removeEventListener('touchend', handleTouchEnd);
-      scrollArea.removeEventListener('touchcancel', handleTouchEnd);
+      scrollArea.removeEventListener("touchstart", handleTouchStart);
+      scrollArea.removeEventListener("touchmove", handleTouchMove);
+      scrollArea.removeEventListener("touchend", handleTouchEnd);
+      scrollArea.removeEventListener("touchcancel", handleTouchEnd);
     };
   }, [touchDragMode, hoveredDayKey]);
 
@@ -320,63 +334,70 @@ export function TrackerContributionGraph({
           </div>
         </div>
       </CardHeader>
-      <TooltipProvider
-        delayDuration={100}
-        skipDelayDuration={0}
-      >
+      <TooltipProvider delayDuration={100} skipDelayDuration={0}>
         <ScrollArea ref={scrollAreaRef} className="-mb-3 max-w-full">
           <div ref={scrollableContentRef} className="flex gap-1 p-1 pb-3 px-6">
-            {weeks.map((week) => (
-              <div key={week[0].toString()} className="flex flex-col gap-1">
-                {week.map((day) => {
-                  const dateKey = formatDate(day, "yyyyMMdd");
-                  const dailyValue = dailyValues.get(dateKey) || 0;
+            {weeks.map((week, weekIndex) => {
+              const firstValidDay = week.find((d) => d !== null);
+              const weekKey = firstValidDay
+                ? firstValidDay.toString()
+                : `week-${weekIndex}`;
 
-                  return (
-                    <Tooltip
-                      key={dateKey}
-                      open={
-                        touchDragMode
-                          ? hoveredDayKey === dateKey
-                          : undefined
-                      }
-                    >
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className={cn(
-                            "block h-3 w-3 rounded-xs hover:ring-2 hover:ring-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                            getContributionColorClassName(
-                              dailyValue,
-                              tracker.goal,
-                              maxDailyValue
-                            )
-                          )}
-                          data-date={dateKey}
-                          aria-label={`${formatDate(day, "MMM d, yyyy")}: ${
-                            dailyValue > 0
-                              ? formatValue(dailyValue)
-                              : "No activity"
-                          }`}
-                        />
-                      </TooltipTrigger>
-                      <TooltipContent className="pointer-events-none">
-                        <div className="text-sm">
-                          <p className="font-semibold">
-                            {formatDate(day, "MMM d, yyyy")}
-                          </p>
-                          <p>
-                            {dailyValue > 0
-                              ? formatValue(dailyValue)
-                              : "No activity"}
-                          </p>
-                        </div>
-                      </TooltipContent>
-                    </Tooltip>
-                  );
-                })}
-              </div>
-            ))}
+              return (
+                <div key={weekKey} className="flex flex-col gap-1">
+                  {week.map((day, index) => {
+                    // Handle padding days (null)
+                    if (!day) {
+                      return <div key={`pad-${weekIndex}-${index}`} className="h-3 w-3" />;
+                    }
+
+                    const dateKey = formatDate(day, "yyyyMMdd");
+                    const dailyValue = dailyValues.get(dateKey) || 0;
+
+                    return (
+                      <Tooltip
+                        key={dateKey}
+                        open={
+                          touchDragMode ? hoveredDayKey === dateKey : undefined
+                        }
+                      >
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className={cn(
+                              "block h-3 w-3 rounded-xs hover:ring-2 hover:ring-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                              getContributionColorClassName(
+                                dailyValue,
+                                tracker.goal,
+                                maxDailyValue
+                              )
+                            )}
+                            data-date={dateKey}
+                            aria-label={`${formatDate(day, "MMM d, yyyy")}: ${
+                              dailyValue > 0
+                                ? formatValue(dailyValue)
+                                : "No activity"
+                            }`}
+                          />
+                        </TooltipTrigger>
+                        <TooltipContent className="pointer-events-none">
+                          <div className="text-sm">
+                            <p className="font-semibold">
+                              {formatDate(day, "MMM d, yyyy")}
+                            </p>
+                            <p>
+                              {dailyValue > 0
+                                ? formatValue(dailyValue)
+                                : "No activity"}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  })}
+                </div>
+              );
+            })}
           </div>
           <ScrollBar orientation="horizontal" />
         </ScrollArea>

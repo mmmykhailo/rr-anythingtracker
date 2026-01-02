@@ -19,6 +19,7 @@ import {
   displayUnits,
 } from "../../../../lib/number-conversions";
 import { differenceInDays, format } from "date-fns";
+import { toMidnight } from "~/lib/dates";
 
 interface Entry {
   id: string;
@@ -42,7 +43,11 @@ export function TrackerCumulativeChart({
   fromDate,
   toDate,
 }: TrackerCumulativeChartProps) {
-  const days = differenceInDays(toDate, fromDate);
+  // Normalize fromDate and toDate to midnight to ensure inclusive range
+  const fromDateMid = toMidnight(fromDate);
+  const toDateMid = toMidnight(toDate);
+
+  const days = differenceInDays(toDateMid, fromDateMid);
 
   // Aggregate entries by date
   const dateValues = new Map<string, number>();
@@ -56,8 +61,8 @@ export function TrackerCumulativeChart({
   const chartData: { label: string; value: number; sortKey: string }[] = [];
   let cumulativeTotal = 0;
 
-  const currentDate = new Date(fromDate);
-  while (currentDate <= toDate) {
+  const currentDate = new Date(fromDateMid);
+  while (currentDate <= toDateMid) {
     const dateKey = format(currentDate, "yyyy-MM-dd");
     const dailyValue = dateValues.get(dateKey) || 0;
     cumulativeTotal += dailyValue;
@@ -72,7 +77,7 @@ export function TrackerCumulativeChart({
       // Show weekly markers
       if (
         currentDate.getDay() === 1 ||
-        currentDate.getTime() === fromDate.getTime()
+        currentDate.getTime() === fromDateMid.getTime()
       ) {
         label = format(currentDate, "MMM d");
       } else {
@@ -82,7 +87,7 @@ export function TrackerCumulativeChart({
       // Show monthly markers
       if (
         currentDate.getDate() === 1 ||
-        currentDate.getTime() === fromDate.getTime()
+        currentDate.getTime() === fromDateMid.getTime()
       ) {
         label = format(currentDate, "MMM d");
       } else {
@@ -118,7 +123,7 @@ export function TrackerCumulativeChart({
       <CardHeader>
         <CardTitle>Cumulative Total</CardTitle>
         <CardDescription>
-          {format(fromDate, "MMM d, yyyy")} - {format(toDate, "MMM d, yyyy")}
+          {format(fromDateMid, "MMM d, yyyy")} - {format(toDateMid, "MMM d, yyyy")}
         </CardDescription>
       </CardHeader>
       <CardContent>

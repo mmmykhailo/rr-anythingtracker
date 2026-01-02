@@ -16,7 +16,7 @@ import {
 import { PeriodSelector } from "~/components/tracker/stats/PeriodSelector";
 import { getSelectedPeriod, calculateUnifiedStats } from "~/lib/stats";
 import { toDisplayValue } from "~/lib/number-conversions";
-import { startOfToday, differenceInDays, endOfToday } from "date-fns";
+import { startOfToday, differenceInDays, endOfToday, format } from "date-fns";
 
 export async function clientLoader({
   params,
@@ -43,8 +43,10 @@ export async function clientLoader({
     const allEntries = await getEntryHistory(trackerId);
 
     const entries = allEntries.filter((entry) => {
-      const entryDate = new Date(entry.date);
-      return entryDate >= fromDate && entryDate <= toDate;
+      // Convert Date objects to strings for consistent comparison with entry.date
+      const fromDateStr = format(fromDate, "yyyy-MM-dd");
+      const toDateStr = format(toDate, "yyyy-MM-dd");
+      return entry.date >= fromDateStr && entry.date <= toDateStr;
     });
 
     // Calculate period-specific stats (total, average, missed days, consistency)
