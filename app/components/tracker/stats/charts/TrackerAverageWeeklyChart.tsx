@@ -20,6 +20,7 @@ import {
   displayUnits,
 } from "../../../../lib/number-conversions";
 import { format, startOfWeek, eachDayOfInterval } from "date-fns";
+import { toMidnight } from "~/lib/dates";
 
 interface Entry {
   id: string;
@@ -43,6 +44,10 @@ export function TrackerAverageWeeklyChart({
   fromDate,
   toDate,
 }: TrackerAverageWeeklyChartProps) {
+  // Normalize fromDate and toDate to midnight to ensure inclusive range
+  const fromDateMid = toMidnight(fromDate);
+  const toDateMid = toMidnight(toDate);
+
   // Aggregate entries by date first
   const dateValues = new Map<string, number>();
   entries.forEach((entry) => {
@@ -55,7 +60,7 @@ export function TrackerAverageWeeklyChart({
   const weeklyData = new Map<string, { total: number; days: number }>();
 
   // Get all days in the range to count days properly
-  const allDays = eachDayOfInterval({ start: fromDate, end: toDate });
+  const allDays = eachDayOfInterval({ start: fromDateMid, end: toDateMid });
   allDays.forEach((day) => {
     const weekStart = startOfWeek(day, { weekStartsOn: 1 });
     const weekKey = format(weekStart, "yyyy-MM-dd");
@@ -77,8 +82,8 @@ export function TrackerAverageWeeklyChart({
     value: number;
     sortKey: string;
   }[] = [];
-  const currentDate = startOfWeek(new Date(fromDate), { weekStartsOn: 1 });
-  const endWeek = startOfWeek(new Date(toDate), { weekStartsOn: 1 });
+  const currentDate = startOfWeek(fromDateMid, { weekStartsOn: 1 });
+  const endWeek = startOfWeek(toDateMid, { weekStartsOn: 1 });
 
   while (currentDate <= endWeek) {
     const weekKey = format(currentDate, "yyyy-MM-dd");
@@ -117,7 +122,7 @@ export function TrackerAverageWeeklyChart({
       <CardHeader>
         <CardTitle>Weekly Average</CardTitle>
         <CardDescription>
-          {format(fromDate, "MMM d, yyyy")} - {format(toDate, "MMM d, yyyy")}
+          {format(fromDateMid, "MMM d, yyyy")} - {format(toDateMid, "MMM d, yyyy")}
         </CardDescription>
       </CardHeader>
       <CardContent>

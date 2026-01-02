@@ -20,6 +20,7 @@ import {
   displayUnits,
 } from "../../../../lib/number-conversions";
 import { format } from "date-fns";
+import { toMidnight } from "~/lib/dates";
 
 interface Entry {
   id: string;
@@ -43,6 +44,10 @@ export function TrackerTotalDailyChart({
   fromDate,
   toDate,
 }: TrackerTotalDailyChartProps) {
+  // Normalize fromDate and toDate to midnight to ensure inclusive range
+  const fromDateMid = toMidnight(fromDate);
+  const toDateMid = toMidnight(toDate);
+
   // Aggregate entries by date
   const dateValues = new Map<string, number>();
   entries.forEach((entry) => {
@@ -58,9 +63,9 @@ export function TrackerTotalDailyChart({
     value: number;
     sortKey: string;
   }[] = [];
-  const currentDate = new Date(fromDate);
+  const currentDate = new Date(fromDateMid);
 
-  while (currentDate <= toDate) {
+  while (currentDate <= toDateMid) {
     const dateKey = format(currentDate, "yyyy-MM-dd");
     const storedValue = dateValues.get(dateKey) || 0;
     const displayValue = toDisplayValue(storedValue, tracker.type);
@@ -96,7 +101,8 @@ export function TrackerTotalDailyChart({
       <CardHeader>
         <CardTitle>Daily Total</CardTitle>
         <CardDescription>
-          {format(fromDate, "MMM d, yyyy")} - {format(toDate, "MMM d, yyyy")}
+          {format(fromDateMid, "MMM d, yyyy")} -{" "}
+          {format(toDateMid, "MMM d, yyyy")}
         </CardDescription>
       </CardHeader>
       <CardContent>
