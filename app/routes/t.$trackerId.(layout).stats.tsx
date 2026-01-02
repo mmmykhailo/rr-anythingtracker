@@ -16,7 +16,7 @@ import {
 import { PeriodSelector } from "~/components/tracker/stats/PeriodSelector";
 import { getSelectedPeriod, calculateUnifiedStats } from "~/lib/stats";
 import { toDisplayValue } from "~/lib/number-conversions";
-import { startOfToday, differenceInDays } from "date-fns";
+import { startOfToday, differenceInDays, endOfToday } from "date-fns";
 
 export async function clientLoader({
   params,
@@ -47,18 +47,57 @@ export async function clientLoader({
       return entryDate >= fromDate && entryDate <= toDate;
     });
 
-    const stats = calculateUnifiedStats(
+    // Calculate period-specific stats (total, average, missed days, consistency)
+    const periodStats = calculateUnifiedStats(
       entries,
       { fromDate, toDate },
       tracker.goal,
       {
         includeTotal: true,
         includeAverage: true,
-        includeGoalStreaks: true,
-        includeMissedGoalDays: true,
-        includeConsistencyScore: true,
+        includeDaysTracked: true,
+        includeDaysMissed: true,
+        includePercentageDaysTracked: true,
+        includeBestDay: true,
+        includeTodayGoalMet: true,
       }
     );
+
+    // Calculate streaks using ALL entries (not filtered by period)
+    // This gives the true current and longest streaks
+    const firstEntryDate =
+      allEntries.length > 0
+        ? new Date(
+            Math.min(...allEntries.map((e) => new Date(e.date).getTime()))
+          )
+        : fromDate;
+
+    const hasGoal = tracker.goal && tracker.goal > 0;
+
+    const streakStats = calculateUnifiedStats(
+      allEntries,
+      { fromDate: firstEntryDate, toDate: endOfToday() },
+      tracker.goal,
+      hasGoal
+        ? {
+            includeGoalStreaks: true,
+            includeMissedGoalDays: true,
+            includeConsistencyScore: true,
+          }
+        : {
+            includeStreaks: true,
+          }
+    );
+
+    // Merge stats: period-specific stats + global streak stats
+    const stats = {
+      ...periodStats,
+      // Use goal streaks if tracker has a goal, otherwise use general streaks
+      currentGoalStreak: hasGoal ? streakStats.currentGoalStreak : streakStats.currentStreak,
+      longestGoalStreak: hasGoal ? streakStats.longestGoalStreak : streakStats.longestStreak,
+      missedGoalDays: streakStats.missedGoalDays,
+      consistencyScore: streakStats.consistencyScore,
+    };
 
     return {
       tracker,
