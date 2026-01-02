@@ -28,3 +28,12 @@ export function formatDateForDisplay(dateString: string): {
     day: date.getDate(),
   };
 }
+
+export function toMidnight(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(year, month - 1, day);
+}
