@@ -31,7 +31,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "~/components/ui/empty";
-import { endOfMonth, isSameDay } from "date-fns";
+import { endOfMonth, endOfToday } from "date-fns";
 import { formatDateString } from "~/lib/dates";
 
 type Entry = {
@@ -140,7 +140,7 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
 
     const streakStats = calculateUnifiedStats(
       allEntries,
-      { fromDate: firstEntryDate, toDate: new Date() },
+      { fromDate: firstEntryDate, toDate: endOfToday() },
       tracker.goal,
       hasGoal ? { includeGoalStreaks: true } : { includeStreaks: true }
     );
