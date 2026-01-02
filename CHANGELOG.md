@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.11] - 2026-01-02
+
+### Changes
+
+- fix streak calculations and unify stat logic (f1f0a70)
+- update tracker stats calculation (ceb9e51)
+- update montly recap (3b362e4)
+- fix floating point issue for quick-add (5179c07)
+
+
 ## [1.0.10] - 2025-11-14
 
 ### Changes
