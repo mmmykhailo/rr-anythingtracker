@@ -4,7 +4,7 @@ import { HistoryDateGroup } from "./HistoryDateGroup";
 import type { Tracker } from "~/lib/trackers";
 import type { HistoryEntry } from "~/lib/history";
 import { toDisplayValue, displayUnits } from "~/lib/number-conversions";
-import { format, subDays, subMonths, subYears } from "date-fns";
+import { format, subDays } from "date-fns";
 
 type TrackerHistoryProps = {
   history: HistoryEntry[];
@@ -48,9 +48,9 @@ export function TrackerHistory({
   const periodTotals = useMemo(() => {
     const today = new Date();
     const todayStr = format(today, "yyyy-MM-dd");
-    const weekAgoStr = format(subDays(today, 7), "yyyy-MM-dd");
-    const monthAgoStr = format(subMonths(today, 1), "yyyy-MM-dd");
-    const yearAgoStr = format(subYears(today, 1), "yyyy-MM-dd");
+    const weekAgoStr = format(subDays(today, 6), "yyyy-MM-dd"); // 7 days including today
+    const monthAgoStr = format(subDays(today, 29), "yyyy-MM-dd"); // 30 days including today
+    const yearAgoStr = format(subDays(today, 364), "yyyy-MM-dd"); // 365 days including today
 
     let weekTotal = 0;
     let monthTotal = 0;

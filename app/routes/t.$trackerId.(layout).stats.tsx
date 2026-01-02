@@ -16,7 +16,7 @@ import {
 import { PeriodSelector } from "~/components/tracker/stats/PeriodSelector";
 import { getSelectedPeriod, calculateUnifiedStats } from "~/lib/stats";
 import { toDisplayValue } from "~/lib/number-conversions";
-import { differenceInDays, endOfToday, format } from "date-fns";
+import { differenceInDays, startOfToday, format } from "date-fns";
 
 export async function clientLoader({
   params,
@@ -32,7 +32,7 @@ export async function clientLoader({
   const { selectedValue, showCustom, fromDate, toDate } = getSelectedPeriod(
     url.searchParams.get("from"),
     url.searchParams.get("to"),
-    endOfToday()
+    startOfToday()
   );
 
   try {
@@ -43,7 +43,7 @@ export async function clientLoader({
     const allEntries = await getEntryHistory(trackerId);
 
     const entries = allEntries.filter((entry) => {
-      // Compare as strings to avoid timezone issues
+      // Convert Date objects to strings for consistent comparison with entry.date
       const fromDateStr = format(fromDate, "yyyy-MM-dd");
       const toDateStr = format(toDate, "yyyy-MM-dd");
       return entry.date >= fromDateStr && entry.date <= toDateStr;
