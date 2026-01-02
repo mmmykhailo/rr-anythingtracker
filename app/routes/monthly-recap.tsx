@@ -32,7 +32,7 @@ import {
   EmptyTitle,
   EmptyDescription,
 } from "~/components/ui/empty";
-import { endOfMonth, isSameDay } from "date-fns";
+import { endOfMonth, endOfToday } from "date-fns";
 import { formatDateString } from "~/lib/dates";
 import { cn } from "~/lib/utils";
 
@@ -134,11 +134,11 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
       (entry) => entry.date >= start && entry.date <= end
     );
 
-    // Calculate all stats in a single pass
+    // Calculate period-specific stats
     const fromDate = new Date(year, month, 1);
     const toDate = endOfMonth(fromDate);
 
-    const calculatedStats = calculateUnifiedStats(
+    const periodStats = calculateUnifiedStats(
       entries,
       { fromDate, toDate },
       tracker.goal,
@@ -149,23 +149,43 @@ export async function clientLoader({ request }: Route.ClientLoaderArgs) {
         includeDaysMissed: true,
         includePercentageDaysTracked: true,
         includeBestDay: true,
-        includeStreaks: true,
         includeTodayGoalMet: true,
       }
     );
 
+    // Calculate streaks using ALL entries for full streak history
+    const firstEntryDate =
+      allEntries.length > 0
+        ? new Date(
+            Math.min(...allEntries.map((e) => new Date(e.date).getTime()))
+          )
+        : fromDate;
+
+    const hasGoal = tracker.goal && tracker.goal > 0;
+
+    const streakStats = calculateUnifiedStats(
+      allEntries,
+      { fromDate: firstEntryDate, toDate: endOfToday() },
+      tracker.goal,
+      hasGoal ? { includeGoalStreaks: true } : { includeStreaks: true }
+    );
+
     stats.push({
       tracker,
-      total: calculatedStats.total ?? 0,
-      daysTracked: calculatedStats.daysTracked ?? 0,
-      daysMissed: calculatedStats.daysMissed ?? 0,
-      percentageDaysTracked: calculatedStats.percentageDaysTracked ?? 0,
-      isTodayGoalMet: calculatedStats.isTodayGoalMet ?? false,
+      total: periodStats.total ?? 0,
+      daysTracked: periodStats.daysTracked ?? 0,
+      daysMissed: periodStats.daysMissed ?? 0,
+      percentageDaysTracked: periodStats.percentageDaysTracked ?? 0,
+      isTodayGoalMet: periodStats.isTodayGoalMet ?? false,
       isCurrentMonth,
-      average: calculatedStats.average ?? 0,
-      bestDay: calculatedStats.bestDay ?? null,
-      longestStreak: calculatedStats.longestStreak ?? 0,
-      currentStreak: calculatedStats.currentStreak ?? 0,
+      average: periodStats.average ?? 0,
+      bestDay: periodStats.bestDay ?? null,
+      longestStreak: hasGoal
+        ? (streakStats.longestGoalStreak ?? 0)
+        : (streakStats.longestStreak ?? 0),
+      currentStreak: hasGoal
+        ? (streakStats.currentGoalStreak ?? 0)
+        : (streakStats.currentStreak ?? 0),
       entries,
     });
   }

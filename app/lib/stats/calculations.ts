@@ -105,11 +105,8 @@ export function calculateStats(
   // Streak tracking
   let longestStreak = 0;
   let tempStreak = 0;
-  let currentStreakValue = 0;
-  let lastTrackedIndex = -1;
 
   // Goal streak tracking
-  let currentGoalStreak = 0;
   let longestGoalStreak = 0;
   let tempGoalStreak = 0;
   let missedGoalDays = 0;
@@ -121,6 +118,10 @@ export function calculateStats(
     const dateStr = dateRange[i];
     const dailyValue = dailyTotals.get(dateStr) || 0;
     const hasEntry = dailyTotals.has(dateStr);
+    const isFutureDay = dateStr > today;
+
+    // Skip future days for most calculations
+    if (isFutureDay) continue;
 
     // Basic stats calculations
     if (config.includeTotal || config.includeAverage) {
@@ -130,7 +131,9 @@ export function calculateStats(
     if (
       config.includeDaysTracked ||
       config.includePercentageDaysTracked ||
-      config.includeDaysMissed
+      config.includeDaysMissed ||
+      config.includeGoalStreaks ||
+      config.includeConsistencyScore
     ) {
       if (hasEntry) {
         daysTracked++;
@@ -151,7 +154,6 @@ export function calculateStats(
       if (hasEntry) {
         tempStreak++;
         longestStreak = Math.max(longestStreak, tempStreak);
-        lastTrackedIndex = i;
       } else {
         tempStreak = 0;
       }
@@ -167,36 +169,60 @@ export function calculateStats(
     ) {
       // Only count days from first tracked entry onwards
       if (firstTrackedIndex !== -1 && i >= firstTrackedIndex) {
-        const isLastDay = i === dateRange.length - 1;
-        const isFutureDay = dateStr > today;
-
-        // Skip future days
-        if (!isFutureDay) {
-          if (dailyValue >= goalValue) {
-            tempGoalStreak++;
-            longestGoalStreak = Math.max(longestGoalStreak, tempGoalStreak);
-            goalMetDays++;
-            currentGoalStreak = tempGoalStreak;
-          } else {
-            tempGoalStreak = 0;
-            currentGoalStreak = 0;
-            // Don't count today if goal not met and it's the last day
-            if (!(isLastDay && todayInRange)) {
-              missedGoalDays++;
-            }
-          }
+        if (dailyValue >= goalValue) {
+          tempGoalStreak++;
+          longestGoalStreak = Math.max(longestGoalStreak, tempGoalStreak);
+          goalMetDays++;
+        } else {
+          tempGoalStreak = 0;
+          missedGoalDays++;
         }
       }
     }
   }
 
-  // Calculate current streak (needs to check if it extends to the most recent entry)
-  if (config.includeStreaks && lastTrackedIndex !== -1) {
-    currentStreakValue = tempStreak;
-    // If the last tracked day is not at the end of the streak, current streak is 0
-    if (lastTrackedIndex < dateRange.length - 1 - tempStreak + 1) {
-      currentStreakValue = 0;
+  // Calculate current streak (consecutive days with entries ending at today)
+  if (config.includeStreaks) {
+    let currentStreakValue = 0;
+    
+    // Current streak only counts if today has an entry
+    // If today has no entry, the streak is broken and current streak is 0
+    if (todayInRange && dailyTotals.has(today)) {
+      const todayIndex = dateRange.indexOf(today);
+      for (let i = todayIndex; i >= 0; i--) {
+        const dateStr = dateRange[i];
+        if (dailyTotals.has(dateStr)) {
+          currentStreakValue++;
+        } else {
+          break;
+        }
+      }
     }
+    
+    result.longestStreak = longestStreak;
+    result.currentStreak = currentStreakValue;
+  }
+
+  // Calculate current goal streak (consecutive days meeting goal ending at today)
+  let currentGoalStreak = 0;
+  if (config.includeGoalStreaks && goalValue && goalValue > 0) {
+    // Current goal streak only counts if today's goal is met
+    const todayTotal = dailyTotals.get(today) || 0;
+    if (todayInRange && todayTotal >= goalValue) {
+      const todayIndex = dateRange.indexOf(today);
+      for (let i = todayIndex; i >= 0; i--) {
+        const dateStr = dateRange[i];
+        const dayTotal = dailyTotals.get(dateStr) || 0;
+        if (dayTotal >= goalValue) {
+          currentGoalStreak++;
+        } else {
+          break;
+        }
+      }
+    }
+    
+    result.currentGoalStreak = currentGoalStreak;
+    result.longestGoalStreak = longestGoalStreak;
   }
 
   // Step 4: Populate result object with requested stats
@@ -214,7 +240,7 @@ export function calculateStats(
 
   if (config.includeDaysMissed) {
     if (goalValue && goalValue > 0) {
-      // For trackers with goals: days where goal wasn't met (already calculated)
+      // For trackers with goals: days where goal wasn't met
       result.daysMissed = missedGoalDays;
     } else {
       // For trackers without goals: days not tracked (excluding future days)
@@ -231,16 +257,6 @@ export function calculateStats(
     result.bestDay = bestDayDate
       ? { date: bestDayDate, value: bestDayValue }
       : null;
-  }
-
-  if (config.includeStreaks) {
-    result.longestStreak = longestStreak;
-    result.currentStreak = currentStreakValue;
-  }
-
-  if (config.includeGoalStreaks && goalValue && goalValue > 0) {
-    result.currentGoalStreak = currentGoalStreak;
-    result.longestGoalStreak = longestGoalStreak;
   }
 
   if (config.includeMissedGoalDays && goalValue && goalValue > 0) {
