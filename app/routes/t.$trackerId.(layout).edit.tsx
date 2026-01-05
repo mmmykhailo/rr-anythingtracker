@@ -209,6 +209,7 @@ export default function TrackerEditPage() {
 
   return (
     <div>
+      <div className="fixed z-50 select-none pointer-events-none top-0 left-0 right-0 h-5 bg-linear-to-b from-black/80 to-black/0" />
       <Form method="post">
         <input type="hidden" name="intent" value="update" />
         <input type="hidden" name="type" value={state.type} />

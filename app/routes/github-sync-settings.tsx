@@ -1,7 +1,18 @@
 import { ChevronLeft, Save, Github, Info, X, Shield } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { Link, redirect, useLocation, Form, useNavigation, useActionData, useLoaderData } from "react-router";
-import type { ClientActionFunctionArgs, ClientLoaderFunctionArgs } from "react-router";
+import {
+  Link,
+  redirect,
+  useLocation,
+  Form,
+  useNavigation,
+  useActionData,
+  useLoaderData,
+} from "react-router";
+import type {
+  ClientActionFunctionArgs,
+  ClientLoaderFunctionArgs,
+} from "react-router";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -111,13 +122,17 @@ export default function GitHubSyncSettingsPage() {
   const [githubToken, setGithubTokenState] = useState(loaderData.githubToken);
   const [gistId, setGistIdState] = useState(loaderData.gistId);
   const savedEncryptionEnabled = loaderData.encryptionEnabled;
-  const [encryptionEnabled, setEncryptionEnabledState] = useState(savedEncryptionEnabled);
+  const [encryptionEnabled, setEncryptionEnabledState] = useState(
+    savedEncryptionEnabled
+  );
   const [showTokenInfo, setShowTokenInfo] = useState(false);
   const [showGistInfo, setShowGistInfo] = useState(false);
   const [showEncryptionInfo, setShowEncryptionInfo] = useState(false);
   const [hasExistingGistData, setHasExistingGistData] = useState(false);
 
-  const isSaving = navigation.state === "submitting" && navigation.formData?.get("intent") === "save";
+  const isSaving =
+    navigation.state === "submitting" &&
+    navigation.formData?.get("intent") === "save";
   const isSyncEnabled = loaderData.isSyncEnabled;
 
   const errors = useMemo((): GithubSyncSettingsPageErrors => {
@@ -158,6 +173,7 @@ export default function GitHubSyncSettingsPage() {
 
   return (
     <div>
+      <div className="fixed z-50 select-none pointer-events-none top-0 left-0 right-0 h-5 bg-linear-to-b from-black/80 to-black/0" />
       <div className="w-full h-16 flex items-center justify-between">
         <div className="flex gap-4 items-center">
           <Button asChild variant="ghost" size="icon">
@@ -252,8 +268,8 @@ export default function GitHubSyncSettingsPage() {
             </div>
             {showGistInfo && (
               <div className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
-                Create a new Gist at gist.github.com with any content (it will be
-                replaced). Copy the ID from the URL:
+                Create a new Gist at gist.github.com with any content (it will
+                be replaced). Copy the ID from the URL:
                 gist.github.com/username/[THIS_IS_THE_ID]
               </div>
             )}
@@ -272,7 +288,11 @@ export default function GitHubSyncSettingsPage() {
           </div>
 
           <div className="grid items-center gap-3">
-            <input type="hidden" name="encryptionEnabled" value={encryptionEnabled.toString()} />
+            <input
+              type="hidden"
+              name="encryptionEnabled"
+              value={encryptionEnabled.toString()}
+            />
             <div className="flex items-center gap-2">
               <Checkbox
                 id="encryptionEnabled"
@@ -301,10 +321,10 @@ export default function GitHubSyncSettingsPage() {
             </div>
             {showEncryptionInfo && (
               <div className="text-xs text-muted-foreground bg-secondary/50 p-2 rounded">
-                When enabled, your data will be encrypted using AES-256-GCM before
-                uploading to GitHub. The encryption key is derived from your
-                GitHub token, so only you can decrypt the data. This adds an extra
-                layer of security to your backups.
+                When enabled, your data will be encrypted using AES-256-GCM
+                before uploading to GitHub. The encryption key is derived from
+                your GitHub token, so only you can decrypt the data. This adds
+                an extra layer of security to your backups.
               </div>
             )}
             {!isCryptoSupported() && (
@@ -331,8 +351,8 @@ export default function GitHubSyncSettingsPage() {
               {isSaving
                 ? "Saving..."
                 : isSyncEnabled
-                ? "Save"
-                : "Save and Enable sync"}
+                  ? "Save"
+                  : "Save and Enable sync"}
             </Button>
           </div>
 
