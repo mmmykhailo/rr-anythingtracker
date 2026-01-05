@@ -121,7 +121,7 @@ console.log('\nNext steps:');
 console.log('  1. Review and edit CHANGELOG.md as needed');
 console.log('  2. Commit the changes:');
 console.log(`     git add package.json CHANGELOG.md`);
-console.log(`     git commit -m "Release v${newVersion}"`);
+console.log(`     git commit -m "release v${newVersion}"`);
 console.log('  3. Push to master:');
 console.log('     git push origin master');
 console.log('\nThe GitHub Action will automatically deploy and tag the release.');
