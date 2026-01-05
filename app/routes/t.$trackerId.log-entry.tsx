@@ -228,6 +228,7 @@ export default function LogEntryPage() {
           onDeleteEntry={handleDeleteEntry}
           deletingEntryId={deletingEntryId}
           entryLoading={isLoading}
+          withoutStats
         />
       )}
     </div>

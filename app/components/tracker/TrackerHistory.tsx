@@ -12,15 +12,18 @@ type TrackerHistoryProps = {
   onDeleteEntry: (entryId: string) => Promise<void>;
   deletingEntryId: string | null;
   entryLoading: boolean;
+  withoutStats?: boolean;
 };
 
-export function TrackerHistory({
-  history,
-  tracker,
-  onDeleteEntry,
-  deletingEntryId,
-  entryLoading,
-}: TrackerHistoryProps) {
+export function TrackerHistory(props: TrackerHistoryProps) {
+  const {
+    history,
+    tracker,
+    onDeleteEntry,
+    deletingEntryId,
+    entryLoading,
+    withoutStats,
+  } = props;
   const groupEntriesByDate = (entries: HistoryEntry[]) => {
     const grouped: Record<string, HistoryEntry[]> = {};
 
@@ -104,38 +107,55 @@ export function TrackerHistory({
   ) : (
     <div className="space-y-4">
       {/* Period Totals */}
-      <div className="grid grid-cols-3 gap-3 p-4 bg-gradient-to-br from-muted/30 to-muted/60 rounded-xl border border-border/50">
-        <div className="text-center space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">7 days</p>
-          <p className="text-lg font-bold tabular-nums">
-            {periodTotals.week.total}
-            <span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span>
-          </p>
-          <p className="text-[10px] text-muted-foreground/60">
-            {periodTotals.week.entriesCount} {periodTotals.week.entriesCount === 1 ? "entry" : "entries"}
-          </p>
+      {!withoutStats && (
+        <div className="grid grid-cols-3 gap-3 p-4 bg-gradient-to-br from-muted/30 to-muted/60 rounded-xl border border-border/50">
+          <div className="text-center space-y-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+              7 days
+            </p>
+            <p className="text-lg font-bold tabular-nums">
+              {periodTotals.week.total}
+              <span className="text-xs font-normal text-muted-foreground ml-0.5">
+                {unit}
+              </span>
+            </p>
+            <p className="text-[10px] text-muted-foreground/60">
+              {periodTotals.week.entriesCount}{" "}
+              {periodTotals.week.entriesCount === 1 ? "entry" : "entries"}
+            </p>
+          </div>
+          <div className="text-center space-y-1 border-x border-border/30">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+              30 days
+            </p>
+            <p className="text-lg font-bold tabular-nums">
+              {periodTotals.month.total}
+              <span className="text-xs font-normal text-muted-foreground ml-0.5">
+                {unit}
+              </span>
+            </p>
+            <p className="text-[10px] text-muted-foreground/60">
+              {periodTotals.month.entriesCount}{" "}
+              {periodTotals.month.entriesCount === 1 ? "entry" : "entries"}
+            </p>
+          </div>
+          <div className="text-center space-y-1">
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">
+              365 days
+            </p>
+            <p className="text-lg font-bold tabular-nums">
+              {periodTotals.year.total}
+              <span className="text-xs font-normal text-muted-foreground ml-0.5">
+                {unit}
+              </span>
+            </p>
+            <p className="text-[10px] text-muted-foreground/60">
+              {periodTotals.year.entriesCount}{" "}
+              {periodTotals.year.entriesCount === 1 ? "entry" : "entries"}
+            </p>
+          </div>
         </div>
-        <div className="text-center space-y-1 border-x border-border/30">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">30 days</p>
-          <p className="text-lg font-bold tabular-nums">
-            {periodTotals.month.total}
-            <span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span>
-          </p>
-          <p className="text-[10px] text-muted-foreground/60">
-            {periodTotals.month.entriesCount} {periodTotals.month.entriesCount === 1 ? "entry" : "entries"}
-          </p>
-        </div>
-        <div className="text-center space-y-1">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground/70 font-medium">365 days</p>
-          <p className="text-lg font-bold tabular-nums">
-            {periodTotals.year.total}
-            <span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span>
-          </p>
-          <p className="text-[10px] text-muted-foreground/60">
-            {periodTotals.year.entriesCount} {periodTotals.year.entriesCount === 1 ? "entry" : "entries"}
-          </p>
-        </div>
-      </div>
+      )}
 
       {groupEntriesByDate(history).map(({ date, entries }) => (
         <HistoryDateGroup
