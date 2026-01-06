@@ -29,7 +29,7 @@ export async function clientLoader({
 
   const url = new URL(request.url);
 
-  const { selectedValue, showCustom, fromDate, toDate } = getSelectedPeriod(
+  const { selectedValue, fromDate, toDate } = getSelectedPeriod(
     url.searchParams.get("from"),
     url.searchParams.get("to"),
     startOfToday()
@@ -106,7 +106,6 @@ export async function clientLoader({
       entries,
       stats,
       selectedValue,
-      showCustom,
       fromDate,
       toDate,
     };
@@ -132,7 +131,6 @@ export default function TrackerChartsPage() {
     entries,
     stats,
     selectedValue,
-    showCustom,
     fromDate,
     toDate,
   } = useLoaderData<typeof clientLoader>();
@@ -186,8 +184,9 @@ export default function TrackerChartsPage() {
       <div className="flex justify-end">
         <PeriodSelector
           selectedValue={selectedValue}
-          showCustom={showCustom}
           onDateRangeChange={handleDateRangeChange}
+          fromDate={format(fromDate, "yyyy-MM-dd")}
+          toDate={format(toDate, "yyyy-MM-dd")}
         />
       </div>
 

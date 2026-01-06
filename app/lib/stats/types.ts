@@ -1,4 +1,4 @@
-export const statsPeriods = ["1M", "3M", "YTD", "1Y"] as const;
+export const statsPeriods = ["1M", "3M", "YTD", "custom"] as const;
 
 export type StatsPeriod = (typeof statsPeriods)[number];
 

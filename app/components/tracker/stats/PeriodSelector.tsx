@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Select,
   SelectContent,
@@ -8,49 +9,70 @@ import {
 import { formatDateString } from "~/lib/dates";
 import {
   calculateDateFromPeriod,
+  calculateEndDateFromPeriod,
+  getPeriodLabel,
   statsPeriods,
   type StatsPeriodOption,
 } from "~/lib/stats";
+import { CustomDateRangeDialog } from "./CustomDateRangeDialog";
 
 interface PeriodSelectorProps {
   selectedValue: StatsPeriodOption | "custom";
-  showCustom: boolean;
   onDateRangeChange: (from: string, to: string) => void;
+  fromDate?: string;
+  toDate?: string;
 }
 
 export function PeriodSelector({
   selectedValue,
-  showCustom,
   onDateRangeChange,
+  fromDate,
+  toDate,
 }: PeriodSelectorProps) {
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const handleDateRangeChange = (value: string) => {
     if (value === "custom") {
+      setIsDialogOpen(true);
       return;
     }
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const to = formatDateString(today);
 
     const from = calculateDateFromPeriod(value as StatsPeriodOption, today);
+    const to = calculateEndDateFromPeriod(value as StatsPeriodOption, today);
     const fromStr = formatDateString(from);
+    const toStr = formatDateString(to);
 
-    onDateRangeChange(fromStr, to);
+    onDateRangeChange(fromStr, toStr);
   };
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   return (
-    <Select value={selectedValue} onValueChange={handleDateRangeChange}>
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent align="end">
-        {statsPeriods.map((period) => (
-          <SelectItem key={period} value={period}>
-            {period}
-          </SelectItem>
-        ))}
-        {showCustom && <SelectItem value="custom">Custom</SelectItem>}
-      </SelectContent>
-    </Select>
+    <>
+      <Select value={selectedValue} onValueChange={handleDateRangeChange}>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent align="end">
+          {statsPeriods.map((period) => (
+            <SelectItem key={period} value={period}>
+              {getPeriodLabel(period)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      
+      <CustomDateRangeDialog
+        open={isDialogOpen}
+        onOpenChange={setIsDialogOpen}
+        onApply={onDateRangeChange}
+        initialFrom={fromDate}
+        initialTo={toDate}
+      />
+    </>
   );
 }

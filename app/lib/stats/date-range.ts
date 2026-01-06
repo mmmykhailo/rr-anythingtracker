@@ -1,4 +1,4 @@
-import { addDays, startOfYear, subMonths, subYears } from "date-fns";
+import { addDays, startOfYear, subMonths, subYears, endOfYear } from "date-fns";
 import { formatDateString } from "~/lib/dates";
 import type { StatsPeriod } from "./types";
 import { statsPeriods } from "./types";
@@ -13,10 +13,23 @@ export function calculateDateFromPeriod(
     return addDays(subMonths(today, 1), 1);
   } else if (period === "3M") {
     return addDays(subMonths(today, 3), 1);
-  } else if (period === "1Y") {
-    return addDays(subYears(today, 1), 1);
   }
   return today;
+}
+
+export function calculateEndDateFromPeriod(
+  period: StatsPeriod,
+  today: Date
+): Date {
+  return today;
+}
+
+export function getPeriodLabel(period: StatsPeriod): string {
+  if (period === "custom") {
+    return "Custom";
+  }
+
+  return period;
 }
 
 export function getSelectedPeriod(
@@ -24,8 +37,7 @@ export function getSelectedPeriod(
   toParam: string | null,
   today: Date
 ): {
-  selectedValue: StatsPeriod | "custom";
-  showCustom: boolean;
+  selectedValue: StatsPeriod;
   fromDate: Date;
   toDate: Date;
 } {
@@ -34,7 +46,6 @@ export function getSelectedPeriod(
     const to = today;
     return {
       selectedValue: "1M",
-      showCustom: false,
       fromDate: from,
       toDate: to,
     };
@@ -45,23 +56,15 @@ export function getSelectedPeriod(
   const to = new Date(toParam);
   to.setHours(0, 0, 0, 0);
 
-  const todayStr = formatDateString(today);
-
-  if (toParam !== todayStr) {
-    return {
-      selectedValue: "custom",
-      showCustom: true,
-      fromDate: from,
-      toDate: to,
-    };
-  }
-
   for (const period of statsPeriods) {
     const expectedFrom = calculateDateFromPeriod(period, today);
-    if (formatDateString(expectedFrom) === fromParam) {
+    const expectedTo = calculateEndDateFromPeriod(period, today);
+    if (
+      formatDateString(expectedFrom) === fromParam &&
+      formatDateString(expectedTo) === toParam
+    ) {
       return {
         selectedValue: period,
-        showCustom: false,
         fromDate: from,
         toDate: to,
       };
@@ -70,7 +73,6 @@ export function getSelectedPeriod(
 
   return {
     selectedValue: "custom",
-    showCustom: true,
     fromDate: from,
     toDate: to,
   };
