@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.12] - 2026-01-06
+
+### Changes
+
+- add gradient to top part of screens (5541909)
+- add custom date range to stats (64eb55d)
+- hide quick stats on log-entry page (1c5471b)
+- add LICENSE (144a8ea)
+
+
 ## [1.0.11] - 2026-01-02
 
 ### Changes
