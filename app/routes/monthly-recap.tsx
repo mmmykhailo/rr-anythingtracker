@@ -238,7 +238,7 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
     values: "text-white",
     description: "text-white",
     card: "bg-black/20",
-    watermark: "text-white/50"
+    watermark: "text-white/50",
   },
   "blue-cyan": {
     name: "Blue",
@@ -248,7 +248,7 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
     values: "text-white",
     description: "text-white",
     card: "bg-black/20",
-    watermark: "text-white/50"
+    watermark: "text-white/50",
   },
   "green-emerald": {
     name: "Green",
@@ -258,7 +258,7 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
     values: "text-white",
     description: "text-white",
     card: "bg-black/20",
-    watermark: "text-white/50"
+    watermark: "text-white/50",
   },
   "orange-red": {
     name: "Orange",
@@ -268,7 +268,7 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
     values: "text-white",
     description: "text-white",
     card: "bg-black/20",
-    watermark: "text-white/50"
+    watermark: "text-white/50",
   },
   "indigo-purple": {
     name: "Purple",
@@ -278,7 +278,7 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
     values: "text-white",
     description: "text-white",
     card: "bg-black/20",
-    watermark: "text-white/50"
+    watermark: "text-white/50",
   },
   "olive-green": {
     name: "Olive",
@@ -288,7 +288,7 @@ const THEMES: Record<RecapThemeName, RecapTheme> = {
     values: "text-white",
     description: "text-amber-500",
     card: "bg-black/10",
-    watermark: "text-white/50"
+    watermark: "text-white/50",
   },
 };
 
@@ -474,6 +474,7 @@ export default function MonthlyRecap() {
 
   return (
     <div className="min-h-screen bg-zinc-950 text-white py-4 pb-8">
+      <div className="fixed z-50 select-none pointer-events-none top-0 left-0 right-0 h-5 bg-linear-to-b from-black/80 to-black/0" />
       {/* Header */}
       <div className="max-w-2xl mx-auto mb-4">
         <div className="flex items-center justify-between mb-2 gap-2">
@@ -506,22 +507,18 @@ export default function MonthlyRecap() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {Array.from(
-                { length: 5 },
-                (_, i) => now.getFullYear() - i
-              ).map((year) => (
-                <SelectItem key={year} value={year.toString()}>
-                  {year}
-                </SelectItem>
-              ))}
+              {Array.from({ length: 5 }, (_, i) => now.getFullYear() - i).map(
+                (year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                )
+              )}
             </SelectContent>
           </Select>
         </div>
         <div className="flex-1 flex mb-4">
-          <Select
-            value={selectedTrackerId}
-            onValueChange={handleTrackerChange}
-          >
+          <Select value={selectedTrackerId} onValueChange={handleTrackerChange}>
             <SelectTrigger className="flex-1 truncate span>truncate">
               <span className="block truncate">
                 <SelectValue placeholder="Select Tracker" />
@@ -550,9 +547,9 @@ export default function MonthlyRecap() {
               stat.tracker.type === "checkbox"
                 ? "-"
                 : formatStoredValue(
-                  Math.round(stat.average),
-                  stat.tracker.type
-                );
+                    Math.round(stat.average),
+                    stat.tracker.type
+                  );
             const displayBest =
               stat.bestDay && stat.tracker.type !== "checkbox"
                 ? formatStoredValue(stat.bestDay.value, stat.tracker.type)
@@ -569,92 +566,217 @@ export default function MonthlyRecap() {
                   )}
                 >
                   <div className="flex items-start gap-4 justify-between">
-                    <h3 className={cn("text-2xl font-bold mb-4 shrink hyphens-auto wrap-break-word", themeObject.title)}>
+                    <h3
+                      className={cn(
+                        "text-2xl font-bold mb-4 shrink hyphens-auto wrap-break-word",
+                        themeObject.title
+                      )}
+                    >
                       {stat.tracker.title}
                     </h3>
 
                     {/* Month indicator */}
-                    <div className={cn("bg-black/30 rounded-lg px-3 py-1 text-sm font-medium shrink-0", themeObject.card, themeObject.date)}>
+                    <div
+                      className={cn(
+                        "bg-black/30 rounded-lg px-3 py-1 text-sm font-medium shrink-0",
+                        themeObject.card,
+                        themeObject.date
+                      )}
+                    >
                       {MONTH_NAMES[selectedMonth]} {selectedYear}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className={cn("bg-black/20 rounded-xl p-4", themeObject.card)}>
-                      <div className={cn("text-3xl font-bold", themeObject.values)}>{displayTotal}</div>
-                      <div className={cn("text-sm opacity-90 mt-1", themeObject.description)}>
+                    <div
+                      className={cn(
+                        "bg-black/20 rounded-xl p-4",
+                        themeObject.card
+                      )}
+                    >
+                      <div
+                        className={cn("text-3xl font-bold", themeObject.values)}
+                      >
+                        {displayTotal}
+                      </div>
+                      <div
+                        className={cn(
+                          "text-sm opacity-90 mt-1",
+                          themeObject.description
+                        )}
+                      >
                         {stat.tracker.type === "checkbox"
                           ? "Days Completed"
                           : "Month total"}
                       </div>
                     </div>
 
-                    <div className={cn("bg-black/20 rounded-xl p-4", themeObject.card)}>
-                      <div className={cn("text-3xl font-bold", themeObject.values)}>
+                    <div
+                      className={cn(
+                        "bg-black/20 rounded-xl p-4",
+                        themeObject.card
+                      )}
+                    >
+                      <div
+                        className={cn("text-3xl font-bold", themeObject.values)}
+                      >
                         {stat.daysTracked}
                       </div>
-                      <div className={cn("text-sm opacity-90 mt-1", themeObject.description)}>
+                      <div
+                        className={cn(
+                          "text-sm opacity-90 mt-1",
+                          themeObject.description
+                        )}
+                      >
                         Days Tracked
                       </div>
                     </div>
 
                     {stat.tracker.type === "checkbox" ? (
-                      <div className={cn("bg-black/20 rounded-xl p-4", themeObject.card)}>
-                        <div className={cn("text-3xl font-bold", themeObject.values)}>
+                      <div
+                        className={cn(
+                          "bg-black/20 rounded-xl p-4",
+                          themeObject.card
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "text-3xl font-bold",
+                            themeObject.values
+                          )}
+                        >
                           {stat.percentageDaysTracked || 0}%
                         </div>
-                        <div className={cn("text-sm opacity-90 mt-1", themeObject.description)}>
+                        <div
+                          className={cn(
+                            "text-sm opacity-90 mt-1",
+                            themeObject.description
+                          )}
+                        >
                           Days Tracked (%)
                         </div>
                       </div>
                     ) : (
-                      <div className={cn("bg-black/20 rounded-xl p-4", themeObject.card)}>
-                        <div className={cn("text-3xl font-bold", themeObject.values)}>{displayAvg}</div>
-                        <div className={cn("text-sm opacity-90 mt-1", themeObject.description)}>
+                      <div
+                        className={cn(
+                          "bg-black/20 rounded-xl p-4",
+                          themeObject.card
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "text-3xl font-bold",
+                            themeObject.values
+                          )}
+                        >
+                          {displayAvg}
+                        </div>
+                        <div
+                          className={cn(
+                            "text-sm opacity-90 mt-1",
+                            themeObject.description
+                          )}
+                        >
                           Daily Average
                         </div>
                       </div>
                     )}
 
-                    <div className={cn("bg-black/20 rounded-xl p-4", themeObject.card)}>
-                      <div className={cn("text-3xl font-bold", themeObject.values)}>
+                    <div
+                      className={cn(
+                        "bg-black/20 rounded-xl p-4",
+                        themeObject.card
+                      )}
+                    >
+                      <div
+                        className={cn("text-3xl font-bold", themeObject.values)}
+                      >
                         {stat.longestStreak}
                       </div>
-                      <div className={cn("text-sm opacity-90 mt-1", themeObject.description)}>
+                      <div
+                        className={cn(
+                          "text-sm opacity-90 mt-1",
+                          themeObject.description
+                        )}
+                      >
                         Longest Streak
                       </div>
                     </div>
 
-                    <div className={cn("bg-black/20 rounded-xl p-4", themeObject.card)}>
-                      <div className={cn("text-3xl font-bold", themeObject.values)}>
+                    <div
+                      className={cn(
+                        "bg-black/20 rounded-xl p-4",
+                        themeObject.card
+                      )}
+                    >
+                      <div
+                        className={cn("text-3xl font-bold", themeObject.values)}
+                      >
                         {stat.currentStreak}
                       </div>
-                      <div className={cn("text-sm opacity-90 mt-1", themeObject.description)}>
+                      <div
+                        className={cn(
+                          "text-sm opacity-90 mt-1",
+                          themeObject.description
+                        )}
+                      >
                         Current Streak
                       </div>
                     </div>
 
-                    <div className={cn("bg-black/20 rounded-xl p-4", themeObject.card)}>
-                      <div className={cn("text-3xl font-bold", themeObject.values)}>
+                    <div
+                      className={cn(
+                        "bg-black/20 rounded-xl p-4",
+                        themeObject.card
+                      )}
+                    >
+                      <div
+                        className={cn("text-3xl font-bold", themeObject.values)}
+                      >
                         {stat.daysMissed}
                         {!stat.isTodayGoalMet && stat.isCurrentMonth && (
-                          <span className={cn("text-base opacity-70", themeObject.description)}>
+                          <span
+                            className={cn(
+                              "text-base opacity-70",
+                              themeObject.description
+                            )}
+                          >
                             {" "}
                             (+ today)
                           </span>
                         )}
                       </div>
-                      <div className={cn("text-sm opacity-90 mt-1", themeObject.description)}>
+                      <div
+                        className={cn(
+                          "text-sm opacity-90 mt-1",
+                          themeObject.description
+                        )}
+                      >
                         {stat.tracker.goal ? "Days Goal Missed" : "Days Missed"}
                       </div>
                     </div>
 
                     {stat.bestDay && stat.tracker.type !== "checkbox" && (
-                      <div className={cn("bg-black/20 rounded-xl p-4 col-span-2", themeObject.card)}>
-                        <div className={cn("text-sm opacity-90", themeObject.description)}>
+                      <div
+                        className={cn(
+                          "bg-black/20 rounded-xl p-4 col-span-2",
+                          themeObject.card
+                        )}
+                      >
+                        <div
+                          className={cn(
+                            "text-sm opacity-90",
+                            themeObject.description
+                          )}
+                        >
                           Most tracked on
                         </div>
-                        <div className={cn("text-xl font-bold mt-1", themeObject.values)}>
+                        <div
+                          className={cn(
+                            "text-xl font-bold mt-1",
+                            themeObject.values
+                          )}
+                        >
                           {displayBest} on{" "}
                           {new Date(stat.bestDay.date).toLocaleDateString(
                             "en-US",
@@ -669,7 +791,6 @@ export default function MonthlyRecap() {
                   </div>
 
                   <div className="text-center mt-4 text-white/50 text-xs flex gap-1">
-
                     <ChartNoAxesColumn className="w-4 h-4 inline mr-1 mb-0.5" />
                     Generated with tracker.mykhailo.net
                   </div>
@@ -686,11 +807,14 @@ export default function MonthlyRecap() {
             {Object.entries(THEMES).map(([key, theme]) => (
               <div
                 key={key}
-                className={cn("w-7 h-7 rounded-full cursor-pointer flex items-center justify-center text-sm font-semibold select-none",
+                className={cn(
+                  "w-7 h-7 rounded-full cursor-pointer flex items-center justify-center text-sm font-semibold select-none",
                   theme.background,
                   theme.title,
-                  selectedTheme === key ? "border-2 border-white" : "")}
-                onClick={() => handleThemeChange(key as RecapThemeName)}>
+                  selectedTheme === key ? "border-2 border-white" : ""
+                )}
+                onClick={() => handleThemeChange(key as RecapThemeName)}
+              >
                 {currentTracker?.title[0].toUpperCase() || "A"}
               </div>
             ))}

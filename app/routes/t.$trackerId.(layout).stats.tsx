@@ -95,8 +95,12 @@ export async function clientLoader({
     const stats = {
       ...periodStats,
       // Use goal streaks if tracker has a goal, otherwise use general streaks
-      currentGoalStreak: hasGoal ? streakStats.currentGoalStreak : streakStats.currentStreak,
-      longestGoalStreak: hasGoal ? streakStats.longestGoalStreak : streakStats.longestStreak,
+      currentGoalStreak: hasGoal
+        ? streakStats.currentGoalStreak
+        : streakStats.currentStreak,
+      longestGoalStreak: hasGoal
+        ? streakStats.longestGoalStreak
+        : streakStats.longestStreak,
       missedGoalDays: streakStats.missedGoalDays,
       consistencyScore: streakStats.consistencyScore,
     };
@@ -181,6 +185,7 @@ export default function TrackerChartsPage() {
 
   return (
     <div className="grid gap-4">
+      <div className="fixed z-50 select-none pointer-events-none top-0 left-0 right-0 h-5 bg-linear-to-b from-black/80 to-black/0" />
       <div className="flex justify-end">
         <PeriodSelector
           selectedValue={selectedValue}

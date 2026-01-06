@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
-import { useLoaderData, useRevalidator, useSubmit, useNavigation } from "react-router";
-import type { ClientLoaderFunctionArgs, ClientActionFunctionArgs } from "react-router";
+import {
+  useLoaderData,
+  useRevalidator,
+  useSubmit,
+  useNavigation,
+} from "react-router";
+import type {
+  ClientLoaderFunctionArgs,
+  ClientActionFunctionArgs,
+} from "react-router";
 import { getTrackerById, getEntryHistory, deleteEntryById } from "~/lib/db";
 import { TrackerHistory } from "~/components/tracker";
 import { debouncedDataChange } from "~/lib/data-change-events";
@@ -23,7 +31,10 @@ export async function clientLoader({ params }: ClientLoaderFunctionArgs) {
   }
 }
 
-export async function clientAction({ params, request }: ClientActionFunctionArgs) {
+export async function clientAction({
+  params,
+  request,
+}: ClientActionFunctionArgs) {
   const trackerId = params.trackerId;
   if (!trackerId) {
     throw new Response("Tracker ID is required", { status: 400 });
@@ -108,12 +119,15 @@ export default function TrackerHistoryPage() {
   }
 
   return (
-    <TrackerHistory
-      history={history}
-      tracker={tracker}
-      onDeleteEntry={handleDeleteEntry}
-      deletingEntryId={deletingEntryId}
-      entryLoading={navigation.state !== "idle"}
-    />
+    <>
+      <div className="fixed z-50 select-none pointer-events-none top-0 left-0 right-0 h-5 bg-linear-to-b from-black/80 to-black/0" />
+      <TrackerHistory
+        history={history}
+        tracker={tracker}
+        onDeleteEntry={handleDeleteEntry}
+        deletingEntryId={deletingEntryId}
+        entryLoading={navigation.state !== "idle"}
+      />
+    </>
   );
 }

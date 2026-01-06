@@ -205,6 +205,8 @@ export default function LogEntryPage() {
 
   return (
     <div className="grid gap-8">
+      <div className="fixed z-50 select-none pointer-events-none top-0 left-0 right-0 h-5 bg-linear-to-b from-black/80 to-black/0" />
+
       <TrackerHeader
         trackerTitle={tracker.title}
         selectedDate={selectedDate}
